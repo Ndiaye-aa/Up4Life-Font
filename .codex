@@ -1,0 +1,30 @@
+# ⚙️ Codex Configuration - Up4Life
+
+## 1. Contextual Awareness
+- **Project Name:** Up4Life (Fitness Management Platform)
+- **Primary Roles:** PERSONAL (Admin/Trainer) and ALUNO (End-user/Client)
+- **Tech Stack Reference:** React, Tailwind CSS, NextAuth, NestJS API
+
+## 2. Code Generation Rules (CLI & Inline)
+- **Framework Pattern:** Always use Functional Components with TypeScript interfaces.
+- **Styling:** Use Tailwind CSS utility classes. Avoid arbitrary values; use the Tailwind theme scale.
+- **Imports:** - Use Absolute Imports (e.g., `src/components/...`) instead of relative paths (`../../`).
+    - Organize imports: React first, external libs second, local components third.
+
+## 3. Terminal & CLI Commands
+- When generating shell commands, always assume a **Node.js/NPM** environment.
+- Prefer `npm` over `yarn` or `pnpm` for this project.
+- For Git operations, always follow the Conventional Commits pattern defined in #architecture.md.
+
+## 4. Refactoring & Edits
+- **Dry Run:** Before applying large refactors, list the files that will be modified.
+- **No Deletions:** Do not remove existing comments or JSDoc unless explicitly requested.
+- **Safety:** Ensure that any change in the Auth flow includes a check for the user Role (RBAC).
+- **Responsividade:** Para grupos de cards ou listas de itens, sempre utilize `grid` com `grid-cols-1` para mobile e `md:grid-cols-2` (ou mais) para desktop, a menos que especificado o contrário. Use `gap-4` como padrão de espaçamento.
+
+## 5. File References
+- Always prioritize information found in:
+    1. #architecture.md (Structure)
+    2. #spec.md (Requirements)
+    3. #.agentrules (Standards)
+
