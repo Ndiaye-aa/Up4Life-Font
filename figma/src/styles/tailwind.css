@@ -1,0 +1,21 @@
+@import 'tailwindcss' source(none);
+@source '../**/*.{js,ts,jsx,tsx}';
+
+@import 'tw-animate-css';
+
+/* Mobile-first enhancements */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Smooth scrolling for the whole app */
+  body {
+    overscroll-behavior: none;
+  }
+}
