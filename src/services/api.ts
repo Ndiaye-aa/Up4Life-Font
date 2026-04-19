@@ -3,10 +3,11 @@ const REQUEST_TIMEOUT_MS = 15_000
 
 interface RequestOptions extends RequestInit {
   data?: any
+  skipAuthRedirect?: boolean
 }
 
 export const api = async (endpoint: string, options: RequestOptions = {}) => {
-  const { data, ...customConfig } = options
+  const { data, skipAuthRedirect = false, ...customConfig } = options
 
   const user = JSON.parse(localStorage.getItem('up4life.auth.user') || 'null')
   const token = user?.access_token || user?.accessToken
@@ -41,9 +42,19 @@ export const api = async (endpoint: string, options: RequestOptions = {}) => {
     clearTimeout(timeoutId)
 
     if (response.status === 401) {
-      localStorage.removeItem('up4life.auth.user')
-      window.location.href = '/login'
-      throw new Error('Sessão expirada. Faça login novamente.')
+      const errorData = await response.json().catch(() => ({}))
+
+      if (!skipAuthRedirect && token && endpoint !== '/auth/login') {
+        localStorage.removeItem('up4life.auth.user')
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
+        throw new Error(
+          errorData.message || 'Sessao expirada. Faca login novamente.',
+        )
+      }
+
+      throw new Error(errorData.message || 'Credenciais invalidas.')
     }
 
     if (!response.ok) {

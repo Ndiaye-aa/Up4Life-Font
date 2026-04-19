@@ -12,10 +12,11 @@ export const loginService = async ({
 
   const response = await api('/auth/login', {
     method: 'POST',
-    data: { 
-      telefone: phone.replace(/\D/g, ''), 
+    skipAuthRedirect: true,
+    data: {
+      telefone: phone.replace(/\D/g, ''),
       senha: password,
-      role
+      role,
     },
   })
 
