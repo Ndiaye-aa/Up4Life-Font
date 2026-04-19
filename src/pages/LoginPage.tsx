@@ -95,6 +95,8 @@ export const LoginPage = () => {
     }
   }
 
+  const submitLogin = handleSubmit(onSubmit)
+
   return (
     <AuthSplitLayout>
       <div className="space-y-6">
@@ -112,7 +114,16 @@ export const LoginPage = () => {
 
         <RoleSegmentedControl onChange={handleRoleChange} value={role} />
 
-        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        <form
+          action="#"
+          className="space-y-4"
+          method="post"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault()
+            void submitLogin(event)
+          }}
+        >
           <TextField
             autoComplete="tel"
             error={errors.phone?.message}
