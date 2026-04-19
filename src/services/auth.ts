@@ -10,13 +10,15 @@ export const loginService = async ({
     throw new Error('Preencha telefone e senha para continuar.')
   }
 
-  const response = await api('/auth/login', {
+  const endpoint =
+    role === 'PERSONAL' ? '/auth/personal/login' : '/auth/aluno/login'
+
+  const response = await api(endpoint, {
     method: 'POST',
     skipAuthRedirect: true,
     data: {
       telefone: phone.replace(/\D/g, ''),
       senha: password,
-      role,
     },
   })
 
