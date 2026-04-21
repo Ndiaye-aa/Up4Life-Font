@@ -1,62 +1,81 @@
 import { api } from './api'
-import type { CreateWorkoutPayload, UpdateWorkoutPayload, WorkoutRecord } from '../@types/workout'
+import type { CreateWorkoutPayload, UpdateWorkoutPayload, WorkoutRecord, WorkoutCategory } from '../@types/workout'
+
+function normalizeExercicios(raw: Record<string, unknown>): WorkoutRecord['exercicios'] {
+  const items = (raw.itens ?? raw.exercicios ?? []) as Record<string, unknown>[]
+  return items.map((item) => ({
+    id: String(item.id ?? item.ordem ?? ''),
+    nome: (item.exercicio ?? item.nome ?? '') as string,
+    musculo: (item.musculo ?? item.grupoMuscular ?? '') as string,
+    series: String(item.series ?? ''),
+    repeticoes: String(item.repeticoes ?? ''),
+    carga: String(item.carga ?? ''),
+    descanso: String(item.descanso ?? ''),
+  }))
+}
+
+function normalizeWorkout(raw: Record<string, unknown>, fallback: CreateWorkoutPayload): WorkoutRecord {
+  const aluno = raw.aluno as Record<string, unknown> | undefined
+  return {
+    id: Number(raw.id),
+    nome: (raw.nome ?? raw.objetivo ?? fallback.nome) as string,
+    id_aluno: Number(raw.alunoId ?? raw.id_aluno ?? fallback.id_aluno),
+    id_personal: Number(aluno?.personalId ?? raw.idPersonal ?? raw.id_personal ?? fallback.id_personal),
+    nome_aluno: (aluno?.nome ?? raw.nomeAluno ?? raw.nome_aluno ?? fallback.nome_aluno) as string,
+    categoria: (raw.categoria ?? fallback.categoria) as WorkoutCategory,
+    ativo: raw.ativo !== false,
+    criado_em: (raw.criado_em ?? raw.criadoEm ?? new Date().toISOString()) as string,
+    duracao_estimada: (raw.duracao_estimada ?? '—') as string,
+    exercicios: normalizeExercicios(raw),
+  }
+}
 
 export const getAllWorkoutsService = async (): Promise<WorkoutRecord[]> => {
-  // O backend não tem um 'fetch all' genérico para personal ainda, 
-  // mas podemos buscar por aluno ou implementar conforme necessário.
-  // Por enquanto, vamos manter a assinatura mas chamar o endpoint correto se existir.
-  return api('/treinos')
+  const result = await api('/treinos')
+  const raw = Array.isArray(result) ? result : result ? [result] : []
+  return raw.map((w: Record<string, unknown>) => normalizeWorkout(w, {} as CreateWorkoutPayload))
 }
 
 export const getStudentWorkoutsService = async (): Promise<WorkoutRecord[]> => {
   const result = await api('/treinos/meu-treino')
   const raw = Array.isArray(result) ? result : result ? [result] : []
-  return raw.map((w: Record<string, unknown>) => ({
-    ...w,
-    exercicios: ((w.itens ?? w.exercicios ?? []) as Record<string, unknown>[]).map((item) => ({
-      id: String(item.id ?? item.ordem ?? ''),
-      nome: (item.exercicio ?? item.nome ?? '') as string,
-      musculo: (item.musculo ?? '') as string,
-      series: String(item.series ?? ''),
-      repeticoes: String(item.repeticoes ?? ''),
-      carga: String(item.carga ?? ''),
-      descanso: String(item.descanso ?? ''),
-    })),
-  })) as WorkoutRecord[]
+  return raw.map((w: Record<string, unknown>) => normalizeWorkout(w, {} as CreateWorkoutPayload))
 }
 
 export const createWorkoutService = async (
   payload: CreateWorkoutPayload,
 ): Promise<WorkoutRecord> => {
-  // Mapeamento para o DTO do Backend
   const backendDto = {
     alunoId: payload.id_aluno,
-    objetivo: payload.nome, // Usando o nome como objetivo por enquanto
+    idPersonal: payload.id_personal,
+    objetivo: payload.nome,
+    categoria: payload.categoria,
     itens: payload.exercicios.map((ex, index) => ({
       exercicio: ex.nome,
       series: Number.parseInt(ex.series, 10),
       repeticoes: ex.repeticoes,
-      carga: ex.carga,
+      carga: ex.carga || undefined,
       ordem: index + 1,
       descanso: Number.parseInt(ex.descanso, 10),
     })),
   }
 
-  return api('/treinos', {
+  const response = await api('/treinos', {
     method: 'POST',
     data: backendDto,
   })
+
+  return normalizeWorkout(response as Record<string, unknown>, payload)
 }
 
 export const updateWorkoutService = async (
   payload: UpdateWorkoutPayload,
 ): Promise<WorkoutRecord> => {
-  // O backend atual não parece ter um PUT /treinos/:id implementado 
-  // Mas vamos deixar a estrutura pronta.
-  return api(`/treinos/${payload.id}`, {
+  const response = await api(`/treinos/${payload.id}`, {
     method: 'PATCH',
     data: payload,
   })
+  return normalizeWorkout(response as Record<string, unknown>, payload)
 }
 
 export const deleteWorkoutService = async (workoutId: number): Promise<void> => {

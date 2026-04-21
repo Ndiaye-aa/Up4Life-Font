@@ -128,7 +128,7 @@ export const AdminDashboardPage = () => {
       accent: 'bg-purple-50 text-[#A020F0]',
       change: 'Total de avaliacoes',
       icon: ClipboardList,
-      label: 'Avaliacoes',
+      label: 'Avaliações',
       value: assessmentsCount != null ? String(assessmentsCount) : '…',
     },
     {

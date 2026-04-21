@@ -1,7 +1,7 @@
 export const formatDateBR = (dateStr: string): string => {
   const parts = dateStr.split('T')[0].split('-')
   if (parts.length !== 3) return dateStr
-  const [day, month, year] = parts
+  const [year, month, day] = parts
   return `${(day ?? '').padStart(2, '0')}/${(month ?? '').padStart(2, '0')}/${year ?? ''}`
 }
 

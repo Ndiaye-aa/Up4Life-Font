@@ -1,5 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-const REQUEST_TIMEOUT_MS = 15_000
+const REQUEST_TIMEOUT_MS = 30_000
 
 interface RequestOptions extends RequestInit {
   data?: any
@@ -44,7 +44,7 @@ export const api = async (endpoint: string, options: RequestOptions = {}) => {
     if (response.status === 401) {
       const errorData = await response.json().catch(() => ({}))
 
-      if (!skipAuthRedirect && token && endpoint !== '/auth/login') {
+      if (!skipAuthRedirect && token) {
         localStorage.removeItem('up4life.auth.user')
         if (window.location.pathname !== '/login') {
           window.location.href = '/login'

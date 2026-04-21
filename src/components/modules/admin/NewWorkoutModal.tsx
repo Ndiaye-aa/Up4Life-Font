@@ -50,7 +50,14 @@ export const NewWorkoutModal = ({
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [catalog, setCatalog] = useState<ExerciseFromApi[]>([])
-  const [isLoadingCatalog, setIsLoadingCatalog] = useState(true)
+
+  useEffect(() => {
+    if (studentId !== '' && students.some((student) => student.id === studentId)) {
+      return
+    }
+
+    setStudentId(initialData?.id_aluno ?? students[0]?.id ?? '')
+  }, [initialData?.id_aluno, studentId, students])
 
   useEffect(() => {
     const fetchCatalog = async () => {
@@ -59,8 +66,6 @@ export const NewWorkoutModal = ({
         setCatalog(data)
       } catch (error) {
         console.error('Falha ao carregar exercicios:', error)
-      } finally {
-        setIsLoadingCatalog(false)
       }
     }
     fetchCatalog()
@@ -226,12 +231,17 @@ export const NewWorkoutModal = ({
               </span>
               <select
                 className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-[#7c3aed] focus:ring-4 focus:ring-[#7c3aed]/10"
+                disabled={students.length === 0}
                 onChange={(event) =>
                   setStudentId(event.target.value ? Number(event.target.value) : '')
                 }
                 value={studentId}
               >
-                <option value="">Selecione o aluno</option>
+                <option value="">
+                  {students.length === 0
+                    ? 'Nenhum aluno vinculado'
+                    : 'Selecione o aluno'}
+                </option>
                 {students.map((student) => (
                   <option key={student.id} value={student.id}>
                     {student.nome}

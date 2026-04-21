@@ -98,9 +98,10 @@ export const AdminProfilePage = () => {
                 <span className="mb-1.5 flex items-center gap-2"><Calendar size={13} />Data de nascimento</span>
                 <input
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm outline-none focus:border-[#7c3aed] focus:ring-4 focus:ring-[#7c3aed]/10"
-                  defaultValue="1991-05-14"
+                  defaultValue="14/05/1991"
                   disabled={!editing}
-                  type="date"
+                  placeholder="DD/MM/AAAA"
+                  type="text"
                 />
               </label>
             </div>

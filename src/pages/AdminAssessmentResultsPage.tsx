@@ -109,19 +109,18 @@ export const AdminAssessmentResultsPage = () => {
     const prevVal = typeof prev === 'string' ? parseFloat(prev.replace('%', '')) : prev
     return parseFloat((currVal - prevVal).toFixed(1))
   }
-
   const metrics = [
     {
       icon: Scale,
       iconBg: 'bg-indigo-50',
-      iconColor: 'text-indigo-600',
+      iconColor: 'bg-purple-50',
       label: 'IMC',
       progress: bmi !== '—' ? Math.min(100, (parseFloat(bmi) / 40) * 100) : 0,
-      progressColor: 'bg-emerald-500',
+      progressColor: 'bg-purple-50',
       range: '18.5 – 24.9',
       status: state.status ?? 'Normal',
       statusBg: 'bg-emerald-50',
-      statusColor: 'text-emerald-600',
+      statusColor: 'bg-purple-50',
       trend: getTrend(bmi, previousAssessment?.imc),
       unit: 'kg/m²',
       value: bmi,
@@ -129,14 +128,14 @@ export const AdminAssessmentResultsPage = () => {
     {
       icon: Activity,
       iconBg: 'bg-blue-50',
-      iconColor: 'text-blue-600',
+      iconColor: 'bg-purple-50',
       label: '% Gordura',
       progress: bodyFat !== '—' ? Math.min(100, (parseFloat(bodyFat) / 40) * 100) : 0,
-      progressColor: 'bg-blue-500',
+      progressColor: 'bg-purple-50',
       range: 'Pollock 7 Dobras',
       status: 'Calculado',
       statusBg: 'bg-emerald-50',
-      statusColor: 'text-emerald-600',
+      statusColor: 'bg-purple-50',
       trend: getTrend(bodyFat, previousAssessment?.percentualGordura),
       unit: '%',
       value: bodyFat.replace('%', ''),
@@ -144,14 +143,14 @@ export const AdminAssessmentResultsPage = () => {
     {
       icon: Heart,
       iconBg: 'bg-rose-50',
-      iconColor: 'text-rose-600',
+      iconColor: 'bg-purple-50',
       label: 'IAC',
       progress: iac !== '—' ? Math.min(100, (parseFloat(iac) / 40) * 100) : 0,
-      progressColor: 'bg-rose-500',
+      progressColor: 'bg-purple-50',
       range: 'Adiposidade',
       status: 'Normal',
       statusBg: 'bg-emerald-50',
-      statusColor: 'text-emerald-600',
+      statusColor: 'bg-purple-50',
       trend: getTrend(iac, previousAssessment?.iac),
       unit: '',
       value: iac,
@@ -159,14 +158,14 @@ export const AdminAssessmentResultsPage = () => {
     {
       icon: Dumbbell,
       iconBg: 'bg-emerald-50',
-      iconColor: 'text-emerald-600',
+      iconColor: 'bg-purple-50',
       label: 'Massa Magra',
       progress: 75,
-      progressColor: 'bg-purple-500',
+      progressColor: 'bg-purple-50',
       range: 'Referência pessoal',
       status: 'Calculado',
       statusBg: 'bg-purple-50',
-      statusColor: 'text-purple-600',
+      statusColor: 'bg-purple-50',
       trend: 0,
       unit: 'kg',
       value: massaMagra,
@@ -225,12 +224,12 @@ export const AdminAssessmentResultsPage = () => {
         navigate('/login')
       }}
       overviewItems={[
-        { label: 'Mes', value: '8' },
+        { label: 'Mês', value: '8' },
         { label: 'Avaliados', value: '6' },
         { label: 'Pendentes', value: '4' },
       ]}
       roleLabel="Personal Trainer"
-      subtitle="Analise detalhada dos indices de composicao corporal do aluno."
+      subtitle="Analise detalhada dos indices de composição corporal do aluno."
       tone="personal"
     >
       <div className="space-y-4 pb-8">

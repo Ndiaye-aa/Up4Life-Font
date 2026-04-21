@@ -8,7 +8,7 @@ import { getDashboardNavItems } from '../utils/dashboardNav'
 import { getStudentsService } from '../services/students'
 import { createAssessmentService } from '../services/assessments'
 import type { StudentRecord } from '../@types/student'
-import { formatDateBR } from '../utils/formatDate'
+import { formatDateBR, todayBR } from '../utils/formatDate'
 
 const SECTIONS = (students: StudentRecord[]) => [
   {
@@ -22,38 +22,38 @@ const SECTIONS = (students: StudentRecord[]) => [
         options: students.map((s) => ({ label: s.nome, value: s.id.toString() })),
         colSpan: 'col-span-2 sm:col-span-4',
       },
-      { id: 'date', label: 'Data da avaliação', type: 'date', colSpan: '' },
+      { id: 'date', label: 'Data da avaliação', type: 'text', placeholder: 'DD/MM/AAAA', colSpan: '' },
       { id: 'sexo', label: 'Sexo', type: 'select', options: [{ label: 'Feminino', value: 'F' }, { label: 'Masculino', value: 'M' }], colSpan: '' },
-      { id: 'peso', label: 'Peso atual (kg)', type: 'number', placeholder: '70.5', colSpan: '' },
-      { id: 'altura', label: 'Altura (m)', type: 'number', placeholder: '1.65', colSpan: '' },
-      { id: 'idade', label: 'Idade (anos)', type: 'number', placeholder: '30', colSpan: '' },
+      { id: 'peso', label: 'Peso atual (kg)', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'altura', label: 'Altura (cm)', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'idade', label: 'Idade (anos)', type: 'number', placeholder: '0', colSpan: '' },
     ],
   },
   {
     id: 'perimetros',
     title: 'Perímetros (cm)',
     fields: [
-      { id: 'toraax', label: 'Tórax', type: 'number', placeholder: '95', colSpan: '' },
-      { id: 'cintura', label: 'Cintura', type: 'number', placeholder: '75', colSpan: '' },
-      { id: 'abdômen', label: 'Abdômen', type: 'number', placeholder: '80', colSpan: '' },
-      { id: 'quadril', label: 'Quadril', type: 'number', placeholder: '95', colSpan: '' },
-      { id: 'thigh_p', label: 'Coxa (D/E)', type: 'number', placeholder: '55', colSpan: '' },
-      { id: 'calf', label: 'Panturrilha', type: 'number', placeholder: '36', colSpan: '' },
-      { id: 'arm', label: 'Braço contraído', type: 'number', placeholder: '31', colSpan: '' },
-      { id: 'forearm', label: 'Antebraço', type: 'number', placeholder: '24', colSpan: '' },
+      { id: 'torax', label: 'Tórax', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'cintura', label: 'Cintura', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'abdomen', label: 'Abdômen', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'quadril', label: 'Quadril', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'thigh', label: 'Coxa (D/E)', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'calf', label: 'Panturrilha', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'arm', label: 'Braço contraído', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'forearm', label: 'Antebraço', type: 'number', placeholder: '0', colSpan: '' },
     ],
   },
   {
     id: 'dobras',
     title: 'Dobras Cutâneas (mm)',
     fields: [
-      { id: 'triceps', label: 'Tríceps', type: 'number', placeholder: '12', colSpan: '' },
-      { id: 'subescapular', label: 'Subescapular', type: 'number', placeholder: '14', colSpan: '' },
-      { id: 'supraIliaca', label: 'Supra-ilíaca', type: 'number', placeholder: '16', colSpan: '' },
-      { id: 'abdominal', label: 'Abdominal', type: 'number', placeholder: '20', colSpan: '' },
-      { id: 'coxa', label: 'Coxa', type: 'number', placeholder: '18', colSpan: '' },
-      { id: 'peitoral', label: 'Peitoral', type: 'number', placeholder: '10', colSpan: '' },
-      { id: 'axilarMedia', label: 'Axilar Média', type: 'number', placeholder: '13', colSpan: '' },
+      { id: 'triceps', label: 'Tríceps', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'subescapular', label: 'Subescapular', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'supraIliaca', label: 'Supra-ilíaca', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'abdominal', label: 'Abdominal', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'coxa', label: 'Coxa', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'peitoral', label: 'Peitoral', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'axilarMedia', label: 'Axilar Média', type: 'number', placeholder: '0', colSpan: '' },
     ],
   },
 ]
@@ -75,8 +75,8 @@ const assessmentSchema = z.object({
     .string()
     .min(1, 'Informe a altura')
     .refine(
-      (v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 0.5 && parseFloat(v) <= 3.0,
-      'Informe a altura em metros (ex: 1.65)',
+      (v) => !isNaN(parseFloat(v)) && parseFloat(v) >= 50 && parseFloat(v) <= 250,
+      'Informe a altura em centímetros (ex: 165)',
     ),
   peso: positiveNum('o peso'),
   alunoId: z.string().min(1, 'Selecione o aluno'),
@@ -89,6 +89,13 @@ const assessmentSchema = z.object({
   coxa: positiveNum('o valor'),
   triceps: positiveNum('o valor'),
 })
+
+const maskDate = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  if (digits.length <= 2) return digits
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+}
 
 function getIMCStatus(imc: number): { color: string; label: string } {
   if (imc < 18.5) return { color: 'text-blue-600', label: 'Abaixo do peso' }
@@ -119,7 +126,7 @@ export const AdminNewAssessmentPage = () => {
   const [isLoadingStudents, setIsLoadingStudents] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [values, setValues] = useState<Record<string, string>>({
-    date: new Date().toISOString().split('T')[0],
+    date: todayBR(),
     sexo: 'F',
   })
   const [observations, setObservations] = useState('')
@@ -140,25 +147,27 @@ export const AdminNewAssessmentPage = () => {
     setExpanded((prev) => (prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]))
 
   const handleChange = (id: string, value: string) => {
-    setValues((prev) => ({ ...prev, [id]: value }))
+    const masked = id === 'date' ? maskDate(value) : value
+    setValues((prev) => ({ ...prev, [id]: masked }))
     if (errors[id]) setErrors((prev) => { const next = { ...prev }; delete next[id]; return next })
   }
 
   const computed = useMemo(() => {
     const peso = parseFloat(values.peso)
-    const altura = parseFloat(values.altura)
+    const alturaCm = parseFloat(values.altura)
+    const alturaM = alturaCm / 100
     const quadril = parseFloat(values.quadril)
     const sexo = values.sexo || 'F'
     const age = parseFloat(values.idade)
 
     const imc =
-      !isNaN(peso) && !isNaN(altura) && altura > 0
-        ? peso / Math.pow(altura, 2)
+      !isNaN(peso) && !isNaN(alturaCm) && alturaCm > 0
+        ? peso / Math.pow(alturaM, 2)
         : null
 
     const iac =
-      !isNaN(quadril) && !isNaN(altura) && altura > 0
-        ? quadril / Math.pow(altura, 1.5) - 18
+      !isNaN(quadril) && !isNaN(alturaCm) && alturaCm > 0
+        ? quadril / Math.pow(alturaM, 1.5) - 18
         : null
 
     const triceps = parseFloat(values.triceps)
@@ -248,7 +257,7 @@ export const AdminNewAssessmentPage = () => {
       const payload = {
         alunoId: parseInt(values.alunoId),
         peso: parseFloat(values.peso),
-        altura: parseFloat(values.altura),
+        altura: parseFloat(values.altura) / 100,
         idade: parseInt(values.idade),
         cintura: values.cintura ? parseFloat(values.cintura) : undefined,
         quadril: values.quadril ? parseFloat(values.quadril) : undefined,
@@ -274,13 +283,13 @@ export const AdminNewAssessmentPage = () => {
           massaMagra: computed.massaMagra?.toFixed(1) ?? '—',
           name: studentName,
           perimetros: {
-            abdomen: values.abdômen,
+            abdomen: values.abdomen,
             arm: values.arm,
             calf: values.calf,
-            chest: values.toraax,
+            chest: values.torax,
             forearm: values.forearm,
             hip: values.quadril,
-            thigh: values.thigh_p,
+            thigh: values.thigh,
             waist: values.cintura,
           },
           status: imcStatus?.label ?? 'Normal',

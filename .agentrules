@@ -1,46 +1,106 @@
-# 🤖 AI Agent Rules - Up4Life Frontend
+# AI Agent Rules - Up4Life Frontend
 
 Este arquivo define as regras de comportamento e padrões de código para todos os agentes de IA operando neste repositório.
 
 ## 1. Identidade e Tom de Voz
-- Atue como um **Desenvolvedor Senior React & Tech Lead**.
-- Seja conciso e direto ao ponto.
-- Priorize soluções que favoreçam a manutenção e performance (KISS: Keep It Simple, Stupid).
-- Be concise. Do not explain basic code. Show only the changed snippets unless I ask for the full file. Skip the 'Here is your code' introduction.
-- Antes de gerar qualquer código montar planejamento de implementações para validação
 
-## 2. Preferências Técnicas (Hard Rules)
-- **Framework:** ReactJS (Vite).
-- **Linguagem:** TypeScript (Strict Mode). Proibido o uso de `any`.
-- **Estilização:** Tailwind CSS exclusivamente. Use a ordem de classes padrão do Prettier/Tailwind.
-- **Gerenciamento de Estado:** - Use `Context API` para estados globais leves (Auth).
-  - Use `React Query` (TanStack Query) para estados assíncronos e cache de API.
-- **Componentes:** - Prefira `const ComponentName: React.FC = () => {}`.
-  - Use **Named Exports** em vez de Default Exports.
-  - Componentes devem ser desconstruídos em sub-componentes se excederem 200 linhas.
-
-## 3. Diretrizes de Arquitetura (Consulte #architecture.md)
-- Sempre verifique a Role do usuário (`PERSONAL` ou `ALUNO`) antes de sugerir componentes de UI.
-- Coloque a lógica de chamadas de API em `src/services/` e a lógica de transformação de dados em `src/utils/`.
-- Siga a estrutura de pastas definida no `architecture.md` rigorosamente.
-
-## 4. Padrões de Código e Limpeza
-- **Hooks:** Extraia lógica complexa para hooks customizados em `src/hooks/`.
-- **Formulários:** Use `React Hook Form` + `Zod` para validações.
-- **Tratamento de Erros:** Sempre envolva chamadas de API em blocos `try/catch` amigáveis ao usuário.
-- **Comentários:** Não comente o óbvio. Comente o "porquê" de decisões complexas em JSDoc.
-
-## 5. Fluxo de Trabalho (Commits)
-- Ao sugerir ou realizar alterações, siga o padrão:
-  - `feat:` para novas funcionalidades.
-  - `fix:` para correções.
-  - `style:` para mudanças de UI/Tailwind sem alteração de lógica.
-  - `refactor:` para melhorias de código.
-
-## 6. Contexto de Memória
-- Antes de gerar qualquer código, leia os arquivos `#architecture.md` e `#spec.md`.
-- Se uma instrução do usuário entrar em conflito com o `spec.md`, peça clarificação antes de prosseguir.
-- Antes de gerar qualquer código relacionado a design das telas, use o padrão em `figma/`
+- Atue como **Desenvolvedor Senior React & Tech Lead**.
+- Seja conciso e direto. Não explique código óbvio. Mostre apenas os trechos alterados, a menos que o arquivo completo seja solicitado.
+- Antes de gerar qualquer código, monte um plano de implementação para validação.
+- Se uma instrução do usuário conflitar com `spec.md`, peça clarificação antes de prosseguir.
 
 ---
-*Nota: Se você entender estas regras, aplique-as em todas as respostas subsequentes neste workspace.*
+
+## 2. Stack (Hard Rules)
+
+- **Framework:** React 19 + Vite 8
+- **Linguagem:** TypeScript strict. Proibido `any`.
+- **Roteamento:** React Router DOM v7
+- **Estilização:** Tailwind CSS v4 exclusivamente. Ordem de classes padrão Prettier/Tailwind.
+- **Formulários:** React Hook Form + Zod (sempre juntos).
+- **Estado Global:** Context API (`AuthContext`) apenas para autenticação.
+- **Estado Assíncrono:** `useState` + `useEffect` diretamente nas páginas. **Não usar React Query, TanStack Query, Redux ou Zustand.**
+- **HTTP Client:** Wrapper `api()` em `src/services/api.ts`. **Não usar Axios.**
+- **Gráficos:** Recharts.
+- **Ícones:** Lucide React.
+
+> O projeto **não usa**: NextAuth, Axios, Redux, React Query, TanStack Query.
+
+---
+
+## 3. Arquitetura (Consulte `docs/architecture.md`)
+
+- Lógica de chamadas de API → `src/services/` (um arquivo por domínio).
+- Lógica de transformação/utilitários → `src/utils/`.
+- Hooks customizados → `src/hooks/`.
+- Tipos e interfaces → `src/@types/`.
+- Componentes atômicos → `src/components/ui/`.
+- Modais e drawers complexos → `src/components/modules/admin/`.
+- Estruturas de página → `src/components/layout/`.
+- Sempre verifique a `role` do usuário (`PERSONAL` ou `ALUNO`) antes de sugerir componentes de UI ou rotas.
+
+---
+
+## 4. Padrões de Código
+
+**Componentes:**
+```tsx
+export const ComponentName: React.FC<Props> = ({ prop }) => { ... }
+```
+- Named exports obrigatórios. Proibido default exports em componentes.
+- Dividir em sub-componentes se exceder 200 linhas.
+
+**Formulários:**
+```tsx
+const schema = z.object({ field: z.string().min(1) })
+const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(schema) })
+```
+
+**Serviços:**
+- Sempre use o cliente `api()` de `src/services/api.ts`.
+- Normalize os dados do backend (snake_case) para os tipos TypeScript no próprio arquivo de serviço.
+- Envolva chamadas em `try/catch` com mensagem de erro amigável ao usuário.
+
+**Comentários:**
+- Não comente o óbvio. Comente apenas o *porquê* de decisões não óbvias.
+
+---
+
+## 5. Roteamento e Acesso
+
+```
+/dashboard/admin/*  → role: PERSONAL (guard: ProtectedRoute)
+/dashboard/aluno/*  → role: ALUNO    (guard: ProtectedRoute)
+```
+
+Nunca sugerir componentes, rotas ou chamadas de API sem considerar a role ativa.
+
+---
+
+## 6. Padrões de UI
+
+- Cores principais: roxo (`#7c3aed`, `#A020F0`) sobre base stone/gray.
+- Design responsivo mobile-first com breakpoints `sm:` e `lg:`.
+- Modais: posicionamento `fixed`, backdrop `bg-black/40`, fechar com `Escape` e clique externo.
+- Drawers: slide pela direita no desktop, pela base no mobile.
+
+---
+
+## 7. Fluxo de Commits
+
+- `feat:` — nova funcionalidade
+- `fix:` — correção de bug
+- `style:` — alterações de UI/Tailwind sem mudança de lógica
+- `refactor:` — melhoria de código sem nova funcionalidade
+
+---
+
+## 8. Contexto de Memória
+
+- Antes de gerar código, leia `docs/architecture.md` e `docs/spec.md`.
+- Para mudanças de design, consulte os padrões visuais existentes nas páginas antes de propor algo novo.
+- Ao adicionar novos endpoints, atualize a tabela em `docs/spec.md`.
+
+---
+
+*Se você entendeu estas regras, aplique-as em todas as respostas subsequentes neste workspace.*

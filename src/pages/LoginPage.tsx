@@ -162,17 +162,12 @@ export const LoginPage = () => {
             {isLoading ? 'Entrando...' : 'Entrar na plataforma'}
           </button>
 
-          <p className="text-center text-sm text-stone-500">
-            Nao tem conta?{' '}
-            <span className="font-medium text-[#7c3aed]">Fale com seu personal</span>
-          </p>
-
           <div className="rounded-2xl border border-[#e9d5ff] bg-[#faf5ff] px-4 py-3">
             <p className="text-xs font-medium text-[#7c3aed]">
-              Acesso de demonstracao
+              Acesso de demonstração
             </p>
             <p className="mt-1 text-xs leading-5 text-[#6d28d9]">
-              Use telefone e senha validos para testar o fluxo por perfil.
+              Quaisquer erros encontrados notificar desenvolvedor para correções.
             </p>
           </div>
         </form>

@@ -85,22 +85,32 @@ export const AdminWorkoutsPage = () => {
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false)
 
   useEffect(() => {
+    if (!user?.id) return
+
     async function load() {
       try {
-        const [ws, ss] = await Promise.all([
+        const [wsResult, ssResult] = await Promise.allSettled([
           getAllWorkoutsService(),
           getStudentsService(),
         ])
-        setWorkouts(ws)
-        setLinkedStudents(ss.map((s) => ({ id: s.id, nome: s.nome })))
-      } catch {
-        setLoadError('Não foi possível carregar os treinos. Tente novamente.')
+
+        if (wsResult.status === 'fulfilled') {
+          setWorkouts(wsResult.value)
+        } else {
+          setLoadError('Não foi possível carregar os treinos. Tente novamente.')
+        }
+
+        if (ssResult.status === 'fulfilled') {
+          setLinkedStudents(ssResult.value.map((student) => ({ id: student.id, nome: student.nome })))
+        } else {
+          setLoadError('Não foi possível carregar os alunos vinculados. Faça login novamente.')
+        }
       } finally {
         setIsLoading(false)
       }
     }
     load()
-  }, [])
+  }, [user?.id])
 
   // TODO(security): GET /treinos retorna todos os treinos no payload de rede.
   // O backend deve filtrar pelo personal autenticado via JWT antes deste filtro cliente ter efeito.

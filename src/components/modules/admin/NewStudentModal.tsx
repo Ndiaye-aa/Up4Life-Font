@@ -29,6 +29,13 @@ const newStudentSchema = z.object({
 
 type NewStudentFormValues = z.infer<typeof newStudentSchema>
 
+const maskDate = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  if (digits.length <= 2) return digits
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+}
+
 const formatPhone = (value: string) => {
   const digits = value.replace(/\D/g, '').slice(0, 11)
 
@@ -54,7 +61,6 @@ interface NewStudentModalProps {
 }
 
 export const NewStudentModal = ({
-  idPersonal,
   onClose,
   onCreated,
 }: NewStudentModalProps) => {
@@ -76,14 +82,19 @@ export const NewStudentModal = ({
   })
 
   const telefoneRegistration = register('telefone')
+  const nascimentoRegistration = register('nascimento')
 
   const onSubmit = async (values: NewStudentFormValues) => {
     setSubmitError('')
 
     try {
+      const nascimentoISO = values.nascimento
+        ? values.nascimento.split('/').reverse().join('-')
+        : undefined
+
       const payload: CreateStudentPayload = {
         historicoSaude: values.historicoSaude?.trim() || undefined,
-        nascimento: values.nascimento || undefined,
+        nascimento: nascimentoISO,
         nome: values.nome,
         sexo: values.sexo ?? undefined,
         telefone: values.telefone.replace(/\D/g, ''),
@@ -179,8 +190,13 @@ export const NewStudentModal = ({
               <span className="text-sm font-medium text-stone-700">Nascimento</span>
               <input
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-sm outline-none transition focus:border-[#7c3aed] focus:bg-white focus:ring-4 focus:ring-[#7c3aed]/10"
-                type="date"
-                {...register('nascimento')}
+                placeholder="DD/MM/AAAA"
+                type="text"
+                {...nascimentoRegistration}
+                onChange={(event) => {
+                  event.target.value = maskDate(event.target.value)
+                  nascimentoRegistration.onChange(event)
+                }}
               />
               {errors.nascimento ? (
                 <span className="text-sm text-rose-600">{errors.nascimento.message}</span>

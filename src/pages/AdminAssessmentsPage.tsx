@@ -1,4 +1,4 @@
-import { Calendar, ChevronRight, ClipboardList, Plus, User, X } from 'lucide-react'
+import { AlertCircle, Calendar, ChevronRight, ClipboardList, Plus, User, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DashboardShell } from '../components/layout/DashboardShell'
@@ -29,6 +29,7 @@ export const AdminAssessmentsPage = () => {
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
   const [students, setStudents] = useState<StudentRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -40,6 +41,7 @@ export const AdminAssessmentsPage = () => {
         setAssessments(as_)
         setStudents(ss)
       } catch (error) {
+        setLoadError('Não foi possível carregar as avaliações. Tente novamente.')
         console.error('Erro ao carregar avaliacoes:', error)
       } finally {
         setIsLoading(false)
@@ -123,12 +125,12 @@ export const AdminAssessmentsPage = () => {
         navigate('/login')
       }}
       overviewItems={[
-        { label: 'Mes', value: String(stats.thisMonth) },
+        { label: 'Mês', value: String(stats.thisMonth) },
         { label: 'Avaliados', value: String(stats.avaliados) },
         { label: 'Pendentes', value: String(stats.pendentes) },
       ]}
       roleLabel="Personal Trainer"
-      subtitle="Historico consolidado para acompanhar composicao corporal e proximas avaliacoes."
+      subtitle="Historico consolidado para acompanhar composição corporal e próximas avaliações."
       tone="personal"
     >
       <div className="space-y-6">
@@ -151,12 +153,11 @@ export const AdminAssessmentsPage = () => {
             Nova avaliação
           </button>
         </section>
-
         <section className="grid grid-cols-3 gap-3">
           {[
-            { bg: 'bg-purple-50', color: 'text-[#7c3aed]', icon: ClipboardList, label: 'Este mes', value: String(stats.thisMonth) },
-            { bg: 'bg-blue-50', color: 'text-blue-600', icon: User, label: 'Avaliados', value: String(stats.avaliados) },
-            { bg: 'bg-amber-50', color: 'text-amber-600', icon: Calendar, label: 'Pendentes', value: String(stats.pendentes) },
+            { bg: 'bg-purple-50', color: 'text-[#A020F0]', icon: ClipboardList, label: 'Este mês', value: String(stats.thisMonth) },
+            { bg: 'bg-purple-50', color: 'text-[#A020F0]', icon: User, label: 'Avaliações', value: String(stats.avaliados) },
+            { bg: 'bg-purple-50', color: 'text-[#A020F0]', icon: Calendar, label: 'Pendentes', value: String(stats.pendentes) },
           ].map((item) => (
             <article key={item.label} className="rounded-[1.5rem] border border-[#e5e7eb] bg-white p-4 shadow-[0_12px_36px_rgba(15,23,42,0.06)]">
               <div className={`${item.bg} mb-2 flex h-9 w-9 items-center justify-center rounded-xl`}>
@@ -167,6 +168,13 @@ export const AdminAssessmentsPage = () => {
             </article>
           ))}
         </section>
+
+        {loadError ? (
+          <div className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <AlertCircle size={16} />
+            {loadError}
+          </div>
+        ) : null}
 
         <section className="rounded-[2rem] border border-[#e5e7eb] bg-white shadow-[0_16px_48px_rgba(15,23,42,0.08)]">
           <div className="flex items-center justify-between border-b border-gray-100 p-4">
@@ -240,7 +248,7 @@ export const AdminAssessmentsPage = () => {
                 </button>
               )) : (
                 <div className="px-4 py-10 text-center">
-                  <p className="text-sm font-medium text-stone-700">Nenhuma avaliacao encontrada.</p>
+                  <p className="text-sm font-medium text-stone-700">Nenhuma avaliação encontrada.</p>
                   <p className="mt-1 text-xs text-stone-400">Este aluno ainda nao possui avaliações registradas.</p>
                 </div>
               )}
