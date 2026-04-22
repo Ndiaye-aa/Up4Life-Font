@@ -14,6 +14,7 @@ import { StudentAssessmentsPage } from './pages/StudentAssessmentsPage'
 import { StudentDashboardPage } from './pages/StudentDashboardPage'
 import { StudentProfilePage } from './pages/StudentProfilePage'
 import { StudentWorkoutsPage } from './pages/StudentWorkoutsPage'
+import { StudentWorkoutSessionPage } from './pages/StudentWorkoutSessionPage'
 
 export const App = (): ReactElement => (
   <Routes>
@@ -86,6 +87,16 @@ export const App = (): ReactElement => (
         </ErrorBoundary>
       }
       path="/dashboard/aluno/treinos"
+    />
+    <Route
+      element={
+        <ErrorBoundary>
+          <ProtectedRoute allowedRoles={['ALUNO']}>
+            <StudentWorkoutSessionPage />
+          </ProtectedRoute>
+        </ErrorBoundary>
+      }
+      path="/dashboard/aluno/treinos/:id/sessao"
     />
     <Route
       element={

@@ -11,9 +11,14 @@ export const StudentProfilePage = () => {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(user?.name ?? '')
   const [phone, setPhone] = useState(user?.phone ?? '')
+  const [birthdate, setBirthdate] = useState('1999-05-14')
   const [bio, setBio] = useState(
     'Aluno focado em consistencia, evolucao corporal e qualidade de vida no longo prazo.',
   )
+
+  const birthdateBR = birthdate
+    ? birthdate.split('-').reverse().join('/')
+    : ''
 
   return (
     <DashboardShell
@@ -89,12 +94,18 @@ export const StudentProfilePage = () => {
               </label>
               <label className="block text-sm text-stone-600">
                 <span className="mb-1.5 flex items-center gap-2"><Calendar size={13} />Data de nascimento</span>
-                <input
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm outline-none focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10"
-                  defaultValue="1999-05-14"
-                  disabled={!editing}
-                  type="date"
-                />
+                {editing ? (
+                  <input
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm outline-none focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10"
+                    onChange={(e) => setBirthdate(e.target.value)}
+                    type="date"
+                    value={birthdate}
+                  />
+                ) : (
+                  <div className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm text-stone-900">
+                    {birthdateBR}
+                  </div>
+                )}
               </label>
             </div>
             <label className="block text-sm text-stone-600">

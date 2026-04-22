@@ -2,7 +2,8 @@ import { api } from './api'
 import type { CreateWorkoutPayload, UpdateWorkoutPayload, WorkoutRecord, WorkoutCategory } from '../@types/workout'
 
 function normalizeExercicios(raw: Record<string, unknown>): WorkoutRecord['exercicios'] {
-  const items = (raw.itens ?? raw.exercicios ?? []) as Record<string, unknown>[]
+  const itens = raw.itens ?? raw.exercicios ?? []
+  const items = Array.isArray(itens) ? (itens as Record<string, unknown>[]) : []
   return items.map((item) => ({
     id: String(item.id ?? item.ordem ?? ''),
     nome: (item.exercicio ?? item.nome ?? '') as string,
@@ -36,8 +37,8 @@ export const getAllWorkoutsService = async (): Promise<WorkoutRecord[]> => {
   return raw.map((w: Record<string, unknown>) => normalizeWorkout(w, {} as CreateWorkoutPayload))
 }
 
-export const getStudentWorkoutsService = async (): Promise<WorkoutRecord[]> => {
-  const result = await api('/treinos/meu-treino')
+export const getStudentWorkoutsService = async (alunoId: number): Promise<WorkoutRecord[]> => {
+  const result = await api(`/treinos/aluno/${alunoId}`)
   const raw = Array.isArray(result) ? result : result ? [result] : []
   return raw.map((w: Record<string, unknown>) => normalizeWorkout(w, {} as CreateWorkoutPayload))
 }

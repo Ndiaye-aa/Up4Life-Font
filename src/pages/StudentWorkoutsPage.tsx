@@ -102,6 +102,7 @@ export const StudentWorkoutsPage = () => {
   const { logout, user } = useAuth()
   const [workouts, setWorkouts] = useState<WorkoutRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [fichaWorkout, setFichaWorkout] = useState<WorkoutRecord | null>(null)
 
   useEffect(() => {
@@ -111,9 +112,17 @@ export const StudentWorkoutsPage = () => {
     }
 
     setIsLoading(true)
-    getStudentWorkoutsService()
-      .then(setWorkouts)
-      .catch(() => setWorkouts([]))
+    setFetchError(null)
+    getStudentWorkoutsService(user.id)
+      .then((data) => {
+        setWorkouts(data)
+        setFetchError(null)
+      })
+      .catch((err: unknown) => {
+        console.error('[StudentWorkoutsPage] Erro ao buscar treinos:', err)
+        setWorkouts([])
+        setFetchError(err instanceof Error ? err.message : 'Erro ao carregar treinos.')
+      })
       .finally(() => setIsLoading(false))
   }, [user?.id])
 
@@ -156,6 +165,11 @@ export const StudentWorkoutsPage = () => {
                 className="h-24 animate-pulse rounded-[1.75rem] border border-[#e5e7eb] bg-white"
               />
             ))
+          ) : fetchError ? (
+            <div className="rounded-[1.75rem] border border-dashed border-red-200 bg-red-50 px-4 py-12 text-center">
+              <p className="text-sm font-medium text-red-700">Erro ao carregar treinos.</p>
+              <p className="mt-1 text-xs text-red-400">{fetchError}</p>
+            </div>
           ) : workouts.length === 0 ? (
             <div className="rounded-[1.75rem] border border-dashed border-gray-200 bg-gray-50 px-4 py-12 text-center">
               <p className="text-sm font-medium text-stone-700">Nenhum treino vinculado ainda.</p>
@@ -201,6 +215,7 @@ export const StudentWorkoutsPage = () => {
                     </button>
                     <button
                       className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+                      onClick={() => navigate(`/dashboard/aluno/treinos/${workout.id}/sessao`, { state: { workout } })}
                       type="button"
                     >
                       <Play size={14} />

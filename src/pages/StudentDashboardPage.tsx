@@ -31,7 +31,7 @@ export const StudentDashboardPage = () => {
       return
     }
     Promise.all([
-      getStudentWorkoutsService(),
+      getStudentWorkoutsService(user.id),
       getStudentAssessmentsService(user.id),
     ])
       .then(([w, a]) => {
