@@ -12,9 +12,13 @@ export const ProtectedRoute = ({
   allowedRoles,
   children,
 }: ProtectedRouteProps) => {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
 
-  if (!user || !user.accessToken) {
+  if (isLoading) {
+    return null
+  }
+
+  if (!user) {
     return <Navigate replace to="/login" />
   }
 

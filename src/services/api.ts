@@ -1,40 +1,89 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const REQUEST_TIMEOUT_MS = 30_000
 
+if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
+  // VITE_API_URL é embutido no bundle em build time; se faltar no ambiente
+  // de build (ex: variável não configurada na Vercel), a build de produção
+  // cai silenciosamente em localhost:3000 e nada funciona. Avisa alto no
+  // console em vez de falhar silenciosamente com erros de CORS confusos.
+  // eslint-disable-next-line no-console
+  console.error(
+    '[up4life] VITE_API_URL não foi definida no build de produção. ' +
+      'A API está apontando para localhost:3000, o que não vai funcionar.',
+  )
+}
+
 export const SESSION_EXPIRED_EVENT = 'up4life:session-expired'
 export const SESSION_EXPIRED_STORAGE_KEY = 'up4life.session_expired'
-export const AUTH_STORAGE_KEY = 'up4life.auth.user'
 
 interface RequestOptions extends RequestInit {
   data?: unknown
   skipAuthRedirect?: boolean
 }
 
-export const api = async (endpoint: string, options: RequestOptions = {}) => {
+const getCsrfToken = (): string | null => {
+  const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+// Refresh compartilhado: evita disparar vários /auth/refresh em paralelo
+// quando várias chamadas tomam 401 ao mesmo tempo (token expirado).
+let refreshPromise: Promise<boolean> | null = null
+
+const tryRefresh = (): Promise<boolean> => {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'X-CSRF-Token': getCsrfToken() ?? '',
+      },
+    })
+      .then((response) => response.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
+const doFetch = (endpoint: string, config: RequestInit) => {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  return fetch(`${API_BASE_URL}${endpoint}`, {
+    ...config,
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeoutId))
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const api = async (
+  endpoint: string,
+  options: RequestOptions = {},
+  isRetry = false,
+): Promise<any> => {
   const { data, skipAuthRedirect = false, ...customConfig } = options
 
-  const user = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || 'null')
-  const token = user?.access_token || user?.accessToken
+  const method = customConfig.method ?? (data ? 'POST' : 'GET')
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
+  if (method !== 'GET' && method !== 'HEAD') {
+    headers['X-CSRF-Token'] = getCsrfToken() ?? ''
   }
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
-
   const config: RequestInit = {
-    method: data ? 'POST' : 'GET',
+    method,
+    credentials: 'include',
     ...customConfig,
     headers: {
       ...headers,
       ...customConfig.headers,
     },
-    signal: controller.signal,
   }
 
   if (data) {
@@ -42,24 +91,29 @@ export const api = async (endpoint: string, options: RequestOptions = {}) => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config)
-    clearTimeout(timeoutId)
+    const response = await doFetch(endpoint, config)
 
     if (response.status === 401) {
-      const errorData = await response.json().catch(() => ({}))
-
-      if (!skipAuthRedirect && token) {
-        localStorage.removeItem(AUTH_STORAGE_KEY)
-        if (window.location.pathname !== '/login') {
-          sessionStorage.setItem(SESSION_EXPIRED_STORAGE_KEY, '1')
-          window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
-        }
-        throw new Error(
-          errorData.message || 'Sessao expirada. Faca login novamente.',
-        )
+      if (skipAuthRedirect) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Credenciais invalidas.')
       }
 
-      throw new Error(errorData.message || 'Credenciais invalidas.')
+      if (!isRetry) {
+        const refreshed = await tryRefresh()
+        if (refreshed) {
+          return api(endpoint, options, true)
+        }
+      }
+
+      if (window.location.pathname !== '/login') {
+        sessionStorage.setItem(SESSION_EXPIRED_STORAGE_KEY, '1')
+        window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+      }
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(
+        errorData.message || 'Sessao expirada. Faca login novamente.',
+      )
     }
 
     if (!response.ok) {
@@ -69,7 +123,6 @@ export const api = async (endpoint: string, options: RequestOptions = {}) => {
 
     return response.json()
   } catch (err) {
-    clearTimeout(timeoutId)
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('A requisição demorou muito. Verifique sua conexão.')
     }

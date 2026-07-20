@@ -7,30 +7,15 @@ import {
 } from 'react'
 import type { AuthUser, LoginPayload } from '../@types/auth'
 import { loginService } from '../services/auth'
-import { AUTH_STORAGE_KEY, SESSION_EXPIRED_EVENT } from '../services/api'
+import { api, SESSION_EXPIRED_EVENT } from '../services/api'
 
 interface AuthContextValue {
   isAuthenticated: boolean
   isLoading: boolean
   login: (payload: LoginPayload) => Promise<AuthUser>
-  logout: () => void
+  logout: () => Promise<void>
   updateUser: (patch: Partial<AuthUser>) => void
   user: AuthUser | null
-}
-
-const getInitialUser = (): AuthUser | null => {
-  const storedUser = window.localStorage.getItem(AUTH_STORAGE_KEY)
-
-  if (!storedUser) {
-    return null
-  }
-
-  try {
-    return JSON.parse(storedUser) as AuthUser
-  } catch {
-    window.localStorage.removeItem(AUTH_STORAGE_KEY)
-    return null
-  }
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -39,9 +24,44 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
+interface MeResponse {
+  user: {
+    id: number
+    nome: string
+    telefone: string
+    role: AuthUser['role']
+  }
+}
+
+const mapMeResponse = (data: MeResponse): AuthUser => ({
+  id: data.user.id,
+  name: data.user.nome,
+  phone: data.user.telefone,
+  role: data.user.role,
+})
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<AuthUser | null>(() => getInitialUser())
-  const [isLoading, setIsLoading] = useState(false)
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    api('/auth/me', { skipAuthRedirect: true })
+      .then((data) => {
+        if (!cancelled) setUser(mapMeResponse(data as MeResponse))
+      })
+      .catch(() => {
+        if (!cancelled) setUser(null)
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const login = async (payload: LoginPayload) => {
     setIsLoading(true)
@@ -49,10 +69,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       const authenticatedUser = await loginService(payload)
       setUser(authenticatedUser)
-      window.localStorage.setItem(
-        AUTH_STORAGE_KEY,
-        JSON.stringify(authenticatedUser),
-      )
 
       return authenticatedUser
     } finally {
@@ -60,13 +76,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api('/auth/logout', { method: 'POST' })
+    } catch {
+      // Mesmo se a chamada falhar (ex: sessão já expirada), limpa o estado local.
+    }
     setUser(null)
-    window.localStorage.removeItem(AUTH_STORAGE_KEY)
   }
 
   useEffect(() => {
-    const handleSessionExpired = () => logout()
+    const handleSessionExpired = () => setUser(null)
     window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
   }, [])
@@ -74,9 +94,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const updateUser = (patch: Partial<AuthUser>) => {
     setUser((prev) => {
       if (!prev) return prev
-      const next = { ...prev, ...patch }
-      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next))
-      return next
+      return { ...prev, ...patch }
     })
   }
 

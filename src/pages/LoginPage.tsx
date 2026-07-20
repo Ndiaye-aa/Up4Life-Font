@@ -76,7 +76,7 @@ export const LoginPage = () => {
     name: 'role',
   })
 
-  if (isAuthenticated && user?.accessToken) {
+  if (isAuthenticated && user) {
     return (
       <Navigate
         replace

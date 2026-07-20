@@ -5,7 +5,6 @@ export interface AuthUser {
   phone: string
   name: string
   role: UserRole
-  accessToken: string
 }
 
 export interface LoginPayload {

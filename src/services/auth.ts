@@ -27,6 +27,5 @@ export const loginService = async ({
     name: response.user.nome,
     phone: response.user.telefone,
     role: response.user.role,
-    accessToken: response.access_token,
   }
 }
