@@ -46,23 +46,15 @@ export const LoginPage = () => {
   const navigate = useNavigate()
   const { isAuthenticated, isLoading, login, user } = useAuth()
   const [submitError, setSubmitError] = useState('')
-  const [sessionExpiredMessage, setSessionExpiredMessage] = useState('')
+  const [sessionExpiredMessage] = useState(() =>
+    sessionStorage.getItem(SESSION_EXPIRED_STORAGE_KEY)
+      ? 'Sua sessão expirou. Faça login novamente.'
+      : '',
+  )
 
   useEffect(() => {
-    if (sessionStorage.getItem(SESSION_EXPIRED_STORAGE_KEY)) {
-      sessionStorage.removeItem(SESSION_EXPIRED_STORAGE_KEY)
-      setSessionExpiredMessage('Sua sessão expirou. Faça login novamente.')
-    }
+    sessionStorage.removeItem(SESSION_EXPIRED_STORAGE_KEY)
   }, [])
-
-  if (isAuthenticated && user?.accessToken) {
-    return (
-      <Navigate
-        replace
-        to={user.role === 'PERSONAL' ? '/dashboard/admin' : '/dashboard/aluno'}
-      />
-    )
-  }
 
   const {
     control,
@@ -83,6 +75,15 @@ export const LoginPage = () => {
     control,
     name: 'role',
   })
+
+  if (isAuthenticated && user?.accessToken) {
+    return (
+      <Navigate
+        replace
+        to={user.role === 'PERSONAL' ? '/dashboard/admin' : '/dashboard/aluno'}
+      />
+    )
+  }
 
   const handleRoleChange = (selectedRole: UserRole) => {
     setValue('role', selectedRole, {

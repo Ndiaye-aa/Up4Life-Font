@@ -17,7 +17,6 @@ import { ChangePasswordModal } from '../components/modules/admin/ChangePasswordM
 import { EditPersonalDataModal } from '../components/modules/admin/EditPersonalDataModal'
 import { PageHeader } from '../components/ui/PageHeader'
 import { useAuth } from '../hooks/useAuth'
-import { usePushNotifications } from '../hooks/usePushNotifications'
 import { getDashboardNavItems } from '../utils/dashboardNav'
 import { exportWorkoutPdf } from '../utils/workoutPdf'
 import { getStudentsService } from '../services/students'
@@ -46,7 +45,6 @@ export const AdminProfilePage = () => {
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
   const [counts, setCounts] = useState({ alunos: 0, avaliacoes: 0 })
   const menuRef = useRef<HTMLDivElement>(null)
-  const push = usePushNotifications()
 
   useEffect(() => {
     Promise.all([getStudentsService(), getAllWorkoutsService(), getAllAssessmentsService()])

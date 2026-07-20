@@ -3,16 +3,17 @@ const REQUEST_TIMEOUT_MS = 30_000
 
 export const SESSION_EXPIRED_EVENT = 'up4life:session-expired'
 export const SESSION_EXPIRED_STORAGE_KEY = 'up4life.session_expired'
+export const AUTH_STORAGE_KEY = 'up4life.auth.user'
 
 interface RequestOptions extends RequestInit {
-  data?: any
+  data?: unknown
   skipAuthRedirect?: boolean
 }
 
 export const api = async (endpoint: string, options: RequestOptions = {}) => {
   const { data, skipAuthRedirect = false, ...customConfig } = options
 
-  const user = JSON.parse(localStorage.getItem('up4life.auth.user') || 'null')
+  const user = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || 'null')
   const token = user?.access_token || user?.accessToken
 
   const headers: Record<string, string> = {
@@ -48,7 +49,7 @@ export const api = async (endpoint: string, options: RequestOptions = {}) => {
       const errorData = await response.json().catch(() => ({}))
 
       if (!skipAuthRedirect && token) {
-        localStorage.removeItem('up4life.auth.user')
+        localStorage.removeItem(AUTH_STORAGE_KEY)
         if (window.location.pathname !== '/login') {
           sessionStorage.setItem(SESSION_EXPIRED_STORAGE_KEY, '1')
           window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))

@@ -66,11 +66,10 @@ export const AdminAssessmentResultsPage = () => {
   const state = (location.state ?? {}) as ResultsState
 
   const [history, setHistory] = useState<AssessmentRecord[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(() => Boolean(state.alunoId))
 
   useEffect(() => {
     if (state.alunoId) {
-      setIsLoading(true)
       getStudentAssessmentsService(state.alunoId)
         .then(setHistory)
         .finally(() => setIsLoading(false))

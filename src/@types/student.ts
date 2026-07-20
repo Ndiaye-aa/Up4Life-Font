@@ -18,5 +18,10 @@ export interface CreateStudentPayload {
   nome: string
   sexo?: StudentSex
   telefone: string
-  senha: string // Adicionado para o cadastro
+}
+
+export interface CreatedStudent {
+  student: StudentRecord
+  // Senha inicial gerada pelo servidor; retornada uma única vez no cadastro.
+  senhaInicial?: string
 }

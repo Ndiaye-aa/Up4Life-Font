@@ -27,8 +27,6 @@ const newStudentSchema = z.object({
     ),
 })
 
-const DEFAULT_STUDENT_PASSWORD = '123456'
-
 type NewStudentFormValues = z.infer<typeof newStudentSchema>
 
 const maskDate = (value: string): string => {
@@ -39,7 +37,6 @@ const maskDate = (value: string): string => {
 }
 
 interface NewStudentModalProps {
-  idPersonal: number
   onClose: () => void
   onCreated: (student: StudentRecord) => void
 }
@@ -49,6 +46,10 @@ export const NewStudentModal = ({
   onCreated,
 }: NewStudentModalProps) => {
   const [submitError, setSubmitError] = useState('')
+  const [createdInfo, setCreatedInfo] = useState<{
+    nome: string
+    senhaInicial?: string
+  } | null>(null)
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
@@ -81,12 +82,11 @@ export const NewStudentModal = ({
         nome: values.nome,
         sexo: values.sexo ?? undefined,
         telefone: values.telefone.replace(/\D/g, ''),
-        senha: DEFAULT_STUDENT_PASSWORD,
       }
 
-      const createdStudent = await createStudentService(payload)
-      onCreated(createdStudent)
-      onClose()
+      const { student, senhaInicial } = await createStudentService(payload)
+      onCreated(student)
+      setCreatedInfo({ nome: student.nome, senhaInicial })
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -121,6 +121,30 @@ export const NewStudentModal = ({
           </button>
         </div>
 
+        {createdInfo ? (
+          <div className="flex-1 overflow-y-auto p-5">
+            <p className="text-sm leading-6 text-mute">
+              <span className="font-semibold text-ink">{createdInfo.nome}</span>{' '}
+              foi cadastrado com sucesso.
+            </p>
+            {createdInfo.senhaInicial ? (
+              <div className="mt-4 rounded-2xl bg-elev px-4 py-4">
+                <p className="text-sm text-mute">
+                  Senha inicial do aluno (anote e repasse — ela não será
+                  exibida novamente):
+                </p>
+                <p className="mt-2 font-mono text-2xl font-semibold tracking-widest text-ink">
+                  {createdInfo.senhaInicial}
+                </p>
+              </div>
+            ) : null}
+            <div className="mt-5 flex justify-end border-t border-line pt-5">
+              <button className="btn-primary" onClick={onClose} type="button">
+                Concluir
+              </button>
+            </div>
+          </div>
+        ) : (
         <form
           className="flex-1 overflow-y-auto p-5"
           onSubmit={handleSubmit(onSubmit)}
@@ -207,8 +231,8 @@ export const NewStudentModal = ({
           </div>
 
           <p className="mt-4 rounded-2xl bg-elev px-4 py-3 text-sm text-mute">
-            A senha inicial do aluno será <span className="font-semibold text-ink">123456</span>.
-            Ele poderá alterá-la depois no próprio perfil.
+            A senha inicial do aluno será gerada automaticamente e exibida após
+            o cadastro. Ele poderá alterá-la depois no próprio perfil.
           </p>
 
           {submitError ? (
@@ -234,6 +258,7 @@ export const NewStudentModal = ({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   )

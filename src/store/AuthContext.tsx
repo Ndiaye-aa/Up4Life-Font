@@ -7,7 +7,7 @@ import {
 } from 'react'
 import type { AuthUser, LoginPayload } from '../@types/auth'
 import { loginService } from '../services/auth'
-import { SESSION_EXPIRED_EVENT } from '../services/api'
+import { AUTH_STORAGE_KEY, SESSION_EXPIRED_EVENT } from '../services/api'
 
 interface AuthContextValue {
   isAuthenticated: boolean
@@ -17,8 +17,6 @@ interface AuthContextValue {
   updateUser: (patch: Partial<AuthUser>) => void
   user: AuthUser | null
 }
-
-const AUTH_STORAGE_KEY = 'up4life.auth.user'
 
 const getInitialUser = (): AuthUser | null => {
   const storedUser = window.localStorage.getItem(AUTH_STORAGE_KEY)

@@ -1,5 +1,9 @@
 import { api } from './api'
-import type { CreateStudentPayload, StudentRecord } from '../@types/student'
+import type {
+  CreatedStudent,
+  CreateStudentPayload,
+  StudentRecord,
+} from '../@types/student'
 
 const normalizeStudent = (
   raw: Record<string, unknown>,
@@ -40,19 +44,26 @@ export const getStudentsService = async (): Promise<StudentRecord[]> => {
 
 export const createStudentService = async (
   payload: CreateStudentPayload,
-): Promise<StudentRecord> => {
+): Promise<CreatedStudent> => {
   const response = await api('/alunos', {
     method: 'POST',
     data: payload,
   })
 
-  return normalizeStudent(response as Record<string, unknown>, {
+  const raw = response as Record<string, unknown>
+  const student = normalizeStudent(raw, {
     historicoSaude: payload.historicoSaude ?? null,
     nascimento: payload.nascimento ?? null,
     nome: payload.nome,
     sexo: payload.sexo ?? null,
     telefone: payload.telefone,
   })
+
+  return {
+    student,
+    senhaInicial:
+      typeof raw.senhaInicial === 'string' ? raw.senhaInicial : undefined,
+  }
 }
 
 export const updateStudentStatusService = async (

@@ -21,20 +21,19 @@ export const StudentDashboardPage = () => {
   const { logout, user } = useAuth()
   const [workouts, setWorkouts] = useState<WorkoutRecord[]>([])
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => Boolean(user?.id))
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     if (!user?.id) {
-      setLoading(false)
       return
     }
-    setLoadError('')
     Promise.all([
       getStudentWorkoutsService(user.id),
       getStudentAssessmentsService(user.id),
     ])
       .then(([w, a]) => {
+        setLoadError('')
         setWorkouts(w)
         const sorted = [...a].sort(
           (x, y) => new Date(y.dataAvaliacao).getTime() - new Date(x.dataAvaliacao).getTime(),

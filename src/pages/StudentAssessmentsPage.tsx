@@ -46,15 +46,14 @@ export const StudentAssessmentsPage = () => {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
   const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => Boolean(user?.id))
   const [error, setError] = useState<string | null>(null)
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentRecord | null>(null)
 
   const fetchAssessments = (id: number) => {
-    setLoading(true)
-    setError(null)
     getStudentAssessmentsService(id)
       .then((data) => {
+        setError(null)
         const sorted = [...data].sort(
           (a, b) => new Date(b.dataAvaliacao).getTime() - new Date(a.dataAvaliacao).getTime(),
         )
@@ -71,7 +70,6 @@ export const StudentAssessmentsPage = () => {
 
   useEffect(() => {
     if (!user?.id) {
-      setLoading(false)
       return
     }
     fetchAssessments(user.id)
@@ -214,7 +212,11 @@ export const StudentAssessmentsPage = () => {
             {user?.id && (
               <button
                 className="btn-primary mt-4 rounded-full px-4 py-2 text-xs"
-                onClick={() => fetchAssessments(user.id)}
+                onClick={() => {
+                  setLoading(true)
+                  setError(null)
+                  fetchAssessments(user.id)
+                }}
                 type="button"
               >
                 Tentar novamente

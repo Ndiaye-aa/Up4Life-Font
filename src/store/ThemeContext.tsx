@@ -1,19 +1,11 @@
 import type { ReactNode } from 'react'
-import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
-
-export type Theme = 'dark' | 'light'
-
-interface ThemeContextValue {
-  theme: Theme
-  toggleTheme: () => void
-}
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ThemeContext, type Theme } from './theme-context'
 
 const THEME_STORAGE_KEY = 'up4life-theme'
 
 const getInitialTheme = (): Theme =>
   localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark'
-
-export const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(getInitialTheme)

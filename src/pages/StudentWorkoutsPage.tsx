@@ -100,18 +100,15 @@ export const StudentWorkoutsPage = () => {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
   const [workouts, setWorkouts] = useState<WorkoutRecord[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(() => Boolean(user?.id))
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [fichaWorkout, setFichaWorkout] = useState<WorkoutRecord | null>(null)
 
   useEffect(() => {
     if (!user?.id) {
-      setIsLoading(false)
       return
     }
 
-    setIsLoading(true)
-    setFetchError(null)
     getStudentWorkoutsService(user.id)
       .then((data) => {
         setWorkouts(data)

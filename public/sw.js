@@ -23,10 +23,22 @@ self.addEventListener('push', (event) => {
   )
 })
 
+// Só navega para caminhos dentro do próprio app; payloads com URL externa caem no '/'.
+const sanitizeUrl = (url) => {
+  try {
+    const resolved = new URL(url || '/', self.location.origin)
+    return resolved.origin === self.location.origin
+      ? resolved.pathname + resolved.search + resolved.hash
+      : '/'
+  } catch {
+    return '/'
+  }
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
-  const url = event.notification.data?.url || '/'
+  const url = sanitizeUrl(event.notification.data?.url)
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {

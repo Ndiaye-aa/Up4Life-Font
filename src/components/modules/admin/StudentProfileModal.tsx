@@ -45,8 +45,6 @@ export const StudentProfileModal = ({ onClose, student }: Props) => {
   const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
-    setIsLoadingWorkouts(true)
-    setLoadError('')
     getStudentWorkoutsService(student.id)
       .then(setWorkouts)
       .catch(() => {

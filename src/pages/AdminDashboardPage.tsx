@@ -128,7 +128,6 @@ export const AdminDashboardPage = () => {
 
       {isModalOpen ? (
         <NewStudentModal
-          idPersonal={personalId ?? 1}
           onClose={() => setIsModalOpen(false)}
           onCreated={(student) => {
             setStudents((currentStudents) => [

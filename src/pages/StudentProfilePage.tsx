@@ -6,9 +6,8 @@ import { ChangePasswordModal } from '../components/modules/admin/ChangePasswordM
 import { EditPersonalDataModal } from '../components/modules/admin/EditPersonalDataModal'
 import { PageHeader } from '../components/ui/PageHeader'
 import { useAuth } from '../hooks/useAuth'
-import { usePushNotifications } from '../hooks/usePushNotifications'
 import { getDashboardNavItems } from '../utils/dashboardNav'
-import { getStudentSelfService, updateStudentSelfService } from '../services/students'
+import { updateStudentSelfService } from '../services/students'
 import { getStudentWorkoutsService } from '../services/workouts'
 import { getStudentAssessmentsService } from '../services/assessments'
 import { formatPhone } from '../utils/formatPhone'
@@ -18,23 +17,8 @@ export const StudentProfilePage = () => {
   const { logout, user } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeModal, setActiveModal] = useState<'data' | 'password' | null>(null)
-  const [birthdate, setBirthdate] = useState('')
-  const [bio, setBio] = useState('')
   const [counts, setCounts] = useState({ treinos: 0, avaliacoes: 0 })
   const menuRef = useRef<HTMLDivElement>(null)
-  const push = usePushNotifications()
-
-  useEffect(() => {
-    getStudentSelfService()
-      .then((self) => {
-        setBirthdate(self.nascimento ? self.nascimento.slice(0, 10) : '')
-        setBio(self.historicoSaude ?? '')
-      })
-      .catch(() => {
-        setBirthdate('')
-        setBio('')
-      })
-  }, [])
 
   useEffect(() => {
     if (!user?.id) return
@@ -70,10 +54,6 @@ export const StudentProfilePage = () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [menuOpen])
-
-  const birthdateBR = birthdate
-    ? birthdate.split('-').reverse().join('/')
-    : 'Não informado'
 
   const openModal = (modal: 'data' | 'password') => {
     setMenuOpen(false)

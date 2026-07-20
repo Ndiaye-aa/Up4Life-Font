@@ -63,7 +63,12 @@ export const StudentWorkoutSessionPage = () => {
   const [completedSets, setCompletedSets] = useState<Record<number, number>>({})
   const [resting, setResting] = useState(false)
   const [finished, setFinished] = useState(false)
-  const startRef = useRef(Date.now())
+  const [elapsedMin, setElapsedMin] = useState(0)
+  const startRef = useRef(0)
+
+  useEffect(() => {
+    startRef.current = Date.now()
+  }, [])
 
   const exercises = workout?.exercicios ?? []
   const current = exercises[exIdx]
@@ -86,6 +91,11 @@ export const StudentWorkoutSessionPage = () => {
       setExIdx((i) => i + 1)
       setResting(false)
     } else {
+      setElapsedMin(
+        startRef.current
+          ? Math.round((Date.now() - startRef.current) / 60000)
+          : 0,
+      )
       setFinished(true)
     }
   }, [exIdx, exercises.length])
@@ -96,8 +106,6 @@ export const StudentWorkoutSessionPage = () => {
       setResting(false)
     }
   }, [exIdx])
-
-  const elapsedMin = Math.round((Date.now() - startRef.current) / 60000)
 
   if (!workout) {
     return (
