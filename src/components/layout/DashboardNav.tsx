@@ -15,7 +15,7 @@ export const DashboardNav = ({
 }: DashboardNavProps) => {
   if (mobile) {
     return (
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-line bg-canvas lg:hidden">
         <div className="grid grid-cols-4">
           {items.map((item) => (
             <NavLink
@@ -23,7 +23,7 @@ export const DashboardNav = ({
               className={({ isActive }) =>
                 [
                   'flex flex-col items-center gap-1 px-2 py-2.5 text-[11px] transition',
-                  isActive ? 'text-[#A020F0]' : 'text-gray-400',
+                  isActive ? 'text-accent' : 'text-faint',
                 ].join(' ')
               }
               to={item.to}
@@ -32,7 +32,7 @@ export const DashboardNav = ({
                 <>
                   <div
                     className={`flex h-8 w-12 items-center justify-center rounded-full ${
-                      isActive ? 'bg-purple-100' : ''
+                      isActive ? 'bg-accent-soft' : ''
                     }`}
                   >
                     <item.icon size={18} />

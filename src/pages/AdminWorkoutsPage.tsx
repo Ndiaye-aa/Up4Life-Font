@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { WorkoutRecord } from '../@types/workout'
 import { DashboardShell } from '../components/layout/DashboardShell'
+import { PageHeader } from '../components/ui/PageHeader'
 import { NewExerciseModal } from '../components/modules/admin/NewExerciseModal'
 import { NewWorkoutModal } from '../components/modules/admin/NewWorkoutModal'
 import { useAuth } from '../hooks/useAuth'
@@ -41,7 +42,7 @@ const WorkoutCardMenu: React.FC<{
     <div className="relative" ref={ref}>
       <button
         aria-label="Opções do treino"
-        className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100"
+        className="rounded-lg p-1.5 text-faint transition hover:bg-elev"
         onClick={() => setIsOpen((prev) => !prev)}
         type="button"
       >
@@ -49,9 +50,9 @@ const WorkoutCardMenu: React.FC<{
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 top-9 z-20 min-w-[160px] overflow-hidden rounded-xl border border-gray-100 bg-white shadow-lg">
+        <div className="absolute right-0 top-9 z-20 min-w-[160px] overflow-hidden rounded-xl border border-line bg-surface shadow-lg">
           <button
-            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-rose-400 transition hover:bg-elev disabled:cursor-not-allowed disabled:opacity-50 light:text-rose-600"
             disabled={isDeleting}
             onClick={() => {
               if (!window.confirm('Tem certeza que deseja deletar este treino? Esta ação não pode ser desfeita.')) return
@@ -112,31 +113,26 @@ export const AdminWorkoutsPage = () => {
     load()
   }, [user?.id])
 
-  // TODO(security): GET /treinos retorna todos os treinos no payload de rede.
-  // O backend deve filtrar pelo personal autenticado via JWT antes deste filtro cliente ter efeito.
-  const linkedWorkouts = useMemo(
-    () => workouts.filter((workout) => workout.id_personal === user?.id),
-    [user?.id, workouts],
-  )
-
+  // GET /treinos já é escopado pelo personal autenticado no backend
+  // (treinos.service.ts findAllByPersonal filtra por aluno.personalId via JWT).
   const filteredWorkouts = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase()
-    if (!normalized) return linkedWorkouts
-    return linkedWorkouts.filter(
+    if (!normalized) return workouts
+    return workouts.filter(
       (workout) =>
         workout.nome.toLowerCase().includes(normalized) ||
         workout.nome_aluno.toLowerCase().includes(normalized),
     )
-  }, [linkedWorkouts, searchTerm])
+  }, [workouts, searchTerm])
 
   const overviewItems = useMemo(() => {
     const today = new Date().toISOString().split('T')[0]
     return [
-      { label: 'Ativos', value: String(linkedWorkouts.filter((item) => item.ativo).length) },
-      { label: 'Hoje', value: String(linkedWorkouts.filter((w) => w.criado_em?.startsWith(today)).length) },
-      { label: 'Modelos', value: String(linkedWorkouts.length) },
+      { label: 'Ativos', value: String(workouts.filter((item) => item.ativo).length) },
+      { label: 'Hoje', value: String(workouts.filter((w) => w.criado_em?.startsWith(today)).length) },
+      { label: 'Modelos', value: String(workouts.length) },
     ]
-  }, [linkedWorkouts])
+  }, [workouts])
 
   // useAuth já redireciona para /login quando não autenticado — este guard é para o TypeScript
   if (!user) return null
@@ -192,7 +188,6 @@ export const AdminWorkoutsPage = () => {
       }}
       overviewItems={overviewItems}
       roleLabel="Personal Trainer"
-      subtitle="Biblioteca de treinos com acesso rapido para criar, revisar e reaproveitar estruturas."
       tone="personal"
     >
       {isExerciseModalOpen ? (
@@ -209,59 +204,52 @@ export const AdminWorkoutsPage = () => {
           onClose={closeModal}
           onCreated={handleCreated}
           onUpdated={handleUpdated}
+          personalName={user?.name}
           students={linkedStudents}
         />
       ) : null}
 
       <div className="space-y-6">
-        <section className="flex flex-col gap-4 rounded-[2rem] border border-[#e5e7eb] bg-white p-6 shadow-[0_16px_48px_rgba(15,23,42,0.08)] sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-[0.24em] text-[#7c3aed]">Treinos</p>
-            <h1 className="font-display mt-2 text-3xl font-semibold text-stone-950">
-              Planilhas de treino
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">
-              Gerencie treinos e exercícios
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-gray-50"
-              onClick={() => setIsExerciseModalOpen(true)}
-              type="button"
-            >
-              <Plus size={16} />
-              Criar exercícios
-            </button>
-            <button
-              className="inline-flex items-center gap-2 rounded-2xl bg-stone-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
-              onClick={openCreate}
-              type="button"
-            >
-              <Plus size={16} />
-              Criar treino
-            </button>
-          </div>
-        </section>
+        <PageHeader
+          action={
+            <div className="flex items-center gap-2">
+              <button className="btn-primary" onClick={openCreate} type="button">
+                <Plus size={16} />
+                Criar treino
+              </button>
+              <button
+                className="inline-flex items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-medium text-ink transition hover:bg-elev"
+                onClick={() => setIsExerciseModalOpen(true)}
+                type="button"
+              >
+                <Plus size={16} />
+                Criar exercícios
+              </button>
+            </div>
+          }
+          description=" "
+          eyebrow="Treinos"
+          title=" "
+        />
 
         {loadError ? (
-          <div className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <p className="flex items-center gap-2 text-sm text-rose-400 light:text-rose-600">
             <AlertCircle size={16} />
             {loadError}
-          </div>
+          </p>
         ) : null}
 
         {deleteError ? (
-          <div className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <p className="flex items-center gap-2 text-sm text-rose-400 light:text-rose-600">
             <AlertCircle size={16} />
             {deleteError}
-          </div>
+          </p>
         ) : null}
 
         <section className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" size={16} />
           <input
-            className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-4 text-sm shadow-sm outline-none focus:border-[#7c3aed] focus:ring-4 focus:ring-[#7c3aed]/10"
+            className="field pl-10"
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="Buscar treino ou aluno..."
             value={searchTerm}
@@ -270,17 +258,14 @@ export const AdminWorkoutsPage = () => {
 
         {isLoading ? (
           <div className="flex justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#7c3aed] border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
           </div>
         ) : (
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filteredWorkouts.map((workout) => (
-              <article
-                className="rounded-[1.5rem] border border-[#e5e7eb] bg-white p-4 shadow-[0_12px_36px_rgba(15,23,42,0.06)]"
-                key={workout.id}
-              >
+              <article className="card p-4" key={workout.id}>
                 <div className="mb-3 flex items-start justify-between">
-                  <span className="rounded-full bg-purple-50 px-2.5 py-1 text-xs text-[#7c3aed]">
+                  <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs text-accent">
                     {workout.categoria}
                   </span>
                   <WorkoutCardMenu
@@ -289,7 +274,7 @@ export const AdminWorkoutsPage = () => {
                   />
                 </div>
 
-                <h3 className="font-display text-xl font-semibold text-stone-950">
+                <h3 className="font-display text-xl font-semibold text-ink">
                   {workout.nome}
                 </h3>
 
@@ -297,10 +282,10 @@ export const AdminWorkoutsPage = () => {
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#a855f7] to-[#6d28d9] text-xs font-semibold text-white">
                     {buildInitials(workout.nome_aluno)}
                   </div>
-                  <span className="text-sm text-stone-500">{workout.nome_aluno}</span>
+                  <span className="text-sm text-mute">{workout.nome_aluno}</span>
                 </div>
 
-                <div className="mt-4 flex gap-4 text-xs text-stone-400">
+                <div className="mt-4 flex gap-4 text-xs text-faint">
                   <div className="flex items-center gap-1.5">
                     <Dumbbell size={13} />
                     {workout.exercicios.length > 0
@@ -313,9 +298,9 @@ export const AdminWorkoutsPage = () => {
                   </div>
                 </div>
 
-                <div className="mt-4 flex gap-2 border-t border-gray-100 pt-4">
+                <div className="mt-4 flex gap-2 border-t border-line pt-4">
                   <button
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-gray-200 py-2.5 text-xs font-medium text-stone-700 transition hover:bg-gray-50"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-line py-2.5 text-xs font-medium text-ink transition hover:bg-elev"
                     onClick={() => openEdit(workout)}
                     type="button"
                   >
@@ -323,7 +308,7 @@ export const AdminWorkoutsPage = () => {
                     Editar
                   </button>
                   <button
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2.5 text-xs text-stone-600 transition hover:bg-gray-50"
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-line px-3 py-2.5 text-xs text-mute transition hover:bg-elev"
                     onClick={() => exportWorkoutPdf(workout)}
                     title="Exportar planilha em PDF"
                     type="button"
@@ -336,24 +321,24 @@ export const AdminWorkoutsPage = () => {
             ))}
 
             {filteredWorkouts.length === 0 ? (
-              <div className="col-span-full rounded-[1.5rem] border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center">
-                <p className="text-sm font-medium text-stone-700">
+              <div className="col-span-full rounded-[1.5rem] border border-dashed border-line px-4 py-10 text-center">
+                <p className="text-sm font-medium text-ink">
                   Nenhum treino encontrado.
                 </p>
-                <p className="mt-1 text-xs text-stone-400">
+                <p className="mt-1 text-xs text-faint">
                   Ajuste a busca ou crie um novo treino para esta biblioteca.
                 </p>
               </div>
             ) : (
               <button
-                className="group flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-[1.5rem] border-2 border-dashed border-gray-200 bg-gray-50 p-5 transition hover:border-[#7c3aed]/40 hover:bg-purple-50/30"
+                className="group flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-[1.5rem] border-2 border-dashed border-line p-5 transition hover:border-accent/40 hover:bg-accent-soft/40"
                 onClick={openCreate}
                 type="button"
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 transition-colors group-hover:bg-purple-100">
-                  <Plus className="text-gray-400 group-hover:text-[#7c3aed]" size={20} />
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-elev transition-colors group-hover:bg-accent-soft">
+                  <Plus className="text-faint group-hover:text-accent" size={20} />
                 </div>
-                <span className="text-sm text-gray-400 group-hover:text-[#7c3aed]">
+                <span className="text-sm text-faint group-hover:text-accent">
                   Criar novo treino
                 </span>
               </button>

@@ -1,17 +1,20 @@
 import {
   createContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
 import type { AuthUser, LoginPayload } from '../@types/auth'
 import { loginService } from '../services/auth'
+import { SESSION_EXPIRED_EVENT } from '../services/api'
 
 interface AuthContextValue {
   isAuthenticated: boolean
   isLoading: boolean
   login: (payload: LoginPayload) => Promise<AuthUser>
   logout: () => void
+  updateUser: (patch: Partial<AuthUser>) => void
   user: AuthUser | null
 }
 
@@ -64,12 +67,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     window.localStorage.removeItem(AUTH_STORAGE_KEY)
   }
 
+  useEffect(() => {
+    const handleSessionExpired = () => logout()
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+  }, [])
+
+  const updateUser = (patch: Partial<AuthUser>) => {
+    setUser((prev) => {
+      if (!prev) return prev
+      const next = { ...prev, ...patch }
+      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
   const value = useMemo<AuthContextValue>(
     () => ({
       isAuthenticated: Boolean(user),
       isLoading,
       login,
       logout,
+      updateUser,
       user,
     }),
     [isLoading, user],

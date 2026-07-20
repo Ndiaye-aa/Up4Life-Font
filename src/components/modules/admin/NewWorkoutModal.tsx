@@ -28,6 +28,7 @@ interface NewWorkoutModalProps {
   onClose: () => void
   onCreated: (workout: WorkoutRecord) => void
   onUpdated?: (workout: WorkoutRecord) => void
+  personalName?: string
   students: LinkedStudent[]
 }
 
@@ -37,39 +38,56 @@ export const NewWorkoutModal = ({
   onClose,
   onCreated,
   onUpdated,
+  personalName,
   students,
 }: NewWorkoutModalProps) => {
   const isEditMode = initialData !== undefined
   const firstStudent = students[0]
-  const [workoutName, setWorkoutName] = useState(initialData?.nome ?? 'Treino A - Peito e Triceps')
+  const [workoutName, setWorkoutName] = useState(initialData?.nome ?? 'Treino ')
   const [category, setCategory] = useState<WorkoutCategory>(initialData?.categoria ?? 'Musculacao')
-  const [studentId, setStudentId] = useState<number | ''>(initialData?.id_aluno ?? firstStudent?.id ?? '')
+  const [studentId, setStudentId] = useState<number | 'self' | ''>(
+    initialData ? (initialData.id_aluno ?? 'self') : (firstStudent?.id ?? ''),
+  )
+  const [observations, setObservations] = useState(initialData?.observacoes ?? '')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<ExerciseEntry[]>(initialData?.exercicios ?? [])
   const [activeTab, setActiveTab] = useState<'catalog' | 'plan'>('catalog')
   const [submitError, setSubmitError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [catalog, setCatalog] = useState<ExerciseFromApi[]>([])
+  const [catalogError, setCatalogError] = useState('')
+  const [catalogReloadKey, setCatalogReloadKey] = useState(0)
 
   useEffect(() => {
+    if (studentId === 'self') {
+      return
+    }
+
     if (studentId !== '' && students.some((student) => student.id === studentId)) {
       return
     }
 
-    setStudentId(initialData?.id_aluno ?? students[0]?.id ?? '')
-  }, [initialData?.id_aluno, studentId, students])
+    if (initialData) {
+      setStudentId(initialData.id_aluno ?? 'self')
+      return
+    }
+
+    setStudentId(students[0]?.id ?? '')
+  }, [initialData, studentId, students])
 
   useEffect(() => {
     const fetchCatalog = async () => {
+      setCatalogError('')
       try {
         const data = await getAllExercisesService()
         setCatalog(data)
       } catch (error) {
-        console.error('Falha ao carregar exercicios:', error)
+        console.error('Falha ao carregar exercícios:', error)
+        setCatalogError('Não foi possível carregar o catálogo de exercícios.')
       }
     }
     fetchCatalog()
-  }, [])
+  }, [catalogReloadKey])
 
   const filteredCatalog = useMemo(() => {
     const normalized = search.trim().toLowerCase()
@@ -136,24 +154,36 @@ export const NewWorkoutModal = ({
     setSubmitError('')
 
     if (workoutName.trim().length < 3) {
-      setSubmitError('Informe um nome de treino valido (min. 3 caracteres).')
+      setSubmitError('Informe um nome de treino válido (min. 3 caracteres).')
       return
     }
 
     if (studentId === '') {
-      setSubmitError('Selecione o aluno para receber o treino.')
+      setSubmitError('Selecione quem vai receber o treino.')
       return
     }
 
     if (selected.length === 0) {
-      setSubmitError('Adicione pelo menos um exercicio a planilha.')
+      setSubmitError('Adicione pelo menos um exercício a planilha.')
       return
     }
 
-    const targetStudent = students.find((item) => item.id === studentId)
+    const hasInvalidNumbers = selected.some((item) => {
+      const series = Number.parseInt(item.series, 10)
+      const descanso = Number.parseInt(item.descanso, 10)
+      return Number.isNaN(series) || series <= 0 || Number.isNaN(descanso) || descanso < 0
+    })
 
-    if (!targetStudent) {
-      setSubmitError('Aluno selecionado nao esta vinculado ao personal.')
+    if (hasInvalidNumbers) {
+      setSubmitError('Preencha séries e descanso com valores numericos válidos em todos os exercícios.')
+      return
+    }
+
+    const targetStudent =
+      studentId === 'self' ? null : students.find((item) => item.id === studentId)
+
+    if (studentId !== 'self' && !targetStudent) {
+      setSubmitError('Aluno selecionado não esta vinculado ao personal.')
       return
     }
 
@@ -163,10 +193,11 @@ export const NewWorkoutModal = ({
       const base: CreateWorkoutPayload = {
         categoria: category,
         exercicios: selected,
-        id_aluno: targetStudent.id,
+        id_aluno: targetStudent?.id ?? null,
         id_personal: idPersonal,
         nome: workoutName,
-        nome_aluno: targetStudent.nome,
+        nome_aluno: targetStudent?.nome ?? personalName ?? 'Você',
+        observacoes: observations,
       }
 
       if (isEditMode) {
@@ -182,7 +213,7 @@ export const NewWorkoutModal = ({
       setSubmitError(
         error instanceof Error
           ? error.message
-          : 'Nao foi possivel salvar o treino agora.',
+          : 'Não foi possível salvar o treino agora.',
       )
     } finally {
       setIsSubmitting(false)
@@ -190,22 +221,23 @@ export const NewWorkoutModal = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center">
-      <div className="flex max-h-[95vh] w-full flex-col rounded-t-[2rem] bg-white shadow-2xl sm:max-w-4xl sm:rounded-[2rem]">
-        <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-5">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative flex max-h-[95vh] w-full flex-col rounded-t-[2rem] border border-line bg-surface shadow-2xl sm:max-w-4xl sm:rounded-[2rem]">
+        <div className="flex items-start justify-between gap-4 border-b border-line p-5">
           <div>
-            <p className="text-sm uppercase tracking-[0.24em] text-[#7c3aed]">
+            <p className="text-sm uppercase tracking-[0.24em] text-accent">
               {isEditMode ? 'Editar treino' : 'Criar treino'}
             </p>
-            <h2 className="font-display mt-2 text-2xl font-semibold text-stone-950">
+            <h2 className="font-display mt-2 text-2xl font-semibold text-ink">
               {isEditMode ? 'Editar planilha' : 'Construtor de planilha'}
             </h2>
-            <p className="mt-1 text-sm leading-6 text-stone-500">
-              Monte a planilha com series, repeticoes, carga e descanso por exercicio.
+            <p className="mt-1 text-sm leading-6 text-mute">
+              Monte a planilha com séries, repetições, carga e descanso por exercício.
             </p>
           </div>
           <button
-            className="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-xl p-2 text-faint transition hover:bg-elev hover:text-ink"
             onClick={onClose}
             type="button"
           >
@@ -214,34 +246,31 @@ export const NewWorkoutModal = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
-          <section className="grid gap-3 rounded-2xl border border-gray-100 bg-gray-50/50 p-4 sm:grid-cols-3">
+          <section className="grid gap-3 border-b border-line pb-4 sm:grid-cols-3">
             <label className="block space-y-2 sm:col-span-1">
-              <span className="text-xs font-medium uppercase tracking-wider text-stone-500">
+              <span className="text-xs font-medium uppercase tracking-wider text-mute">
                 Nome do treino
               </span>
               <input
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-[#7c3aed] focus:ring-4 focus:ring-[#7c3aed]/10"
+                className="field"
                 onChange={(event) => setWorkoutName(event.target.value)}
                 value={workoutName}
               />
             </label>
             <label className="block space-y-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-stone-500">
+              <span className="text-xs font-medium uppercase tracking-wider text-mute">
                 Aluno
               </span>
               <select
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-[#7c3aed] focus:ring-4 focus:ring-[#7c3aed]/10"
-                disabled={students.length === 0}
-                onChange={(event) =>
-                  setStudentId(event.target.value ? Number(event.target.value) : '')
-                }
+                className="field"
+                onChange={(event) => {
+                  const { value } = event.target
+                  setStudentId(value === 'self' ? 'self' : value ? Number(value) : '')
+                }}
                 value={studentId}
               >
-                <option value="">
-                  {students.length === 0
-                    ? 'Nenhum aluno vinculado'
-                    : 'Selecione o aluno'}
-                </option>
+                <option value="">Selecione o aluno</option>
+                <option value="self">Eu mesmo ({personalName ?? 'personal'})</option>
                 {students.map((student) => (
                   <option key={student.id} value={student.id}>
                     {student.nome}
@@ -250,11 +279,11 @@ export const NewWorkoutModal = ({
               </select>
             </label>
             <label className="block space-y-2">
-              <span className="text-xs font-medium uppercase tracking-wider text-stone-500">
+              <span className="text-xs font-medium uppercase tracking-wider text-mute">
                 Categoria
               </span>
               <select
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-[#7c3aed] focus:ring-4 focus:ring-[#7c3aed]/10"
+                className="field"
                 onChange={(event) =>
                   setCategory(event.target.value as WorkoutCategory)
                 }
@@ -269,12 +298,26 @@ export const NewWorkoutModal = ({
             </label>
           </section>
 
-          <div className="mt-4 flex gap-1 rounded-xl bg-gray-100 p-1 lg:hidden">
+          <label className="mt-4 block space-y-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-mute">
+              Obs
+              <span className="ml-1 normal-case text-faint">(opcional)</span>
+            </span>
+            <textarea
+              className="field resize-none"
+              onChange={(event) => setObservations(event.target.value)}
+              placeholder="Observações sobre o treino, adaptações, cuidados especiais..."
+              rows={2}
+              value={observations}
+            />
+          </label>
+
+          <div className="mt-4 flex gap-1 rounded-xl bg-elev p-1 lg:hidden">
             <button
               className={`flex-1 rounded-lg py-2.5 text-sm transition-all ${
                 activeTab === 'catalog'
-                  ? 'bg-white font-medium text-stone-950 shadow-sm'
-                  : 'text-stone-500'
+                  ? 'bg-surface font-medium text-ink shadow-sm'
+                  : 'text-mute'
               }`}
               onClick={() => setActiveTab('catalog')}
               type="button"
@@ -284,15 +327,15 @@ export const NewWorkoutModal = ({
             <button
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm transition-all ${
                 activeTab === 'plan'
-                  ? 'bg-white font-medium text-stone-950 shadow-sm'
-                  : 'text-stone-500'
+                  ? 'bg-surface font-medium text-ink shadow-sm'
+                  : 'text-mute'
               }`}
               onClick={() => setActiveTab('plan')}
               type="button"
             >
               Planilha
               {selected.length > 0 ? (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#7c3aed] text-xs text-white">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent-strong text-xs text-white">
                   {selected.length}
                 </span>
               ) : null}
@@ -301,52 +344,64 @@ export const NewWorkoutModal = ({
 
           <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
             <section
-              className={`rounded-2xl border border-gray-100 bg-white shadow-sm ${
+              className={`rounded-2xl border border-line ${
                 activeTab === 'plan' ? 'hidden lg:block' : ''
               }`}
             >
-              <div className="border-b border-gray-100 p-4">
-                <h3 className="font-display text-lg font-semibold text-stone-950">
-                  Catalogo de exercicios
+              <div className="border-b border-line p-4">
+                <h3 className="font-display text-lg font-semibold text-ink">
+                  Catalogo de exercícios
                 </h3>
                 <div className="relative mt-3">
                   <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-faint"
                     size={15}
                   />
                   <input
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-9 pr-4 text-sm outline-none focus:border-[#7c3aed] focus:ring-4 focus:ring-[#7c3aed]/10"
+                    className="field pl-9"
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Buscar exercicio ou musculo..."
                     value={search}
                   />
                 </div>
               </div>
-              <div className="max-h-[55vh] divide-y divide-gray-50 overflow-y-auto">
+              {catalogError ? (
+                <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 text-sm text-rose-400 light:text-rose-600">
+                  <span>{catalogError}</span>
+                  <button
+                    className="shrink-0 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs font-medium text-rose-400 hover:bg-rose-500/25 light:bg-rose-100 light:text-rose-700"
+                    onClick={() => setCatalogReloadKey((key) => key + 1)}
+                    type="button"
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              ) : null}
+              <div className="max-h-[55vh] divide-y divide-line overflow-y-auto">
                 {filteredCatalog.map((exercise) => {
                   const isAdded = selected.some((item) => item.id === exercise.id.toString())
 
                   return (
                     <div
-                      className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-gray-50"
+                      className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-elev"
                       key={exercise.id}
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gray-100">
-                        <Dumbbell className="text-gray-400" size={15} />
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-elev">
+                        <Dumbbell className="text-faint" size={15} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm text-stone-950">
+                        <p className="truncate text-sm text-ink">
                           {exercise.nome}
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-faint">
                           {exercise.grupoMuscular}
                         </p>
                       </div>
                       <button
                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all ${
                           isAdded
-                            ? 'bg-emerald-50 text-emerald-500'
-                            : 'bg-gray-100 text-gray-500 hover:bg-purple-100 hover:text-[#7c3aed]'
+                            ? 'bg-emerald-500/12 text-emerald-400 light:bg-emerald-50 light:text-emerald-500'
+                            : 'bg-elev text-mute hover:bg-accent-soft hover:text-accent'
                         }`}
                         disabled={isAdded}
                         onClick={() => handleAddExercise(exercise.id.toString())}
@@ -358,33 +413,33 @@ export const NewWorkoutModal = ({
                   )
                 })}
                 {filteredCatalog.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-sm text-gray-400">
-                    Nenhum exercicio encontrado.
+                  <div className="px-4 py-10 text-center text-sm text-faint">
+                    Nenhum exercício encontrado.
                   </div>
                 ) : null}
               </div>
             </section>
 
             <section
-              className={`rounded-2xl border border-gray-100 bg-white shadow-sm ${
+              className={`rounded-2xl border border-line ${
                 activeTab === 'catalog' ? 'hidden lg:block' : ''
               }`}
             >
-              <div className="flex items-center justify-between border-b border-gray-100 p-4">
-                <h3 className="font-display text-lg font-semibold text-stone-950">
+              <div className="flex items-center justify-between border-b border-line p-4">
+                <h3 className="font-display text-lg font-semibold text-ink">
                   Planilha{' '}
-                  <span className="ml-1 text-sm text-gray-400">
+                  <span className="ml-1 text-sm text-faint">
                     ({selected.length} ex.)
                   </span>
                 </h3>
               </div>
 
               {selected.length === 0 ? (
-                <div className="py-16 text-center text-gray-400">
+                <div className="py-16 text-center text-faint">
                   <Dumbbell className="mx-auto mb-3 opacity-40" size={32} />
-                  <p className="text-sm">Adicione exercicios do catalogo</p>
+                  <p className="text-sm">Adicione exercícios do catalogo</p>
                   <button
-                    className="mt-3 text-sm text-[#7c3aed] lg:hidden"
+                    className="mt-3 text-sm text-accent lg:hidden"
                     onClick={() => setActiveTab('catalog')}
                     type="button"
                   >
@@ -392,27 +447,27 @@ export const NewWorkoutModal = ({
                   </button>
                 </div>
               ) : (
-                <div className="max-h-[55vh] divide-y divide-gray-50 overflow-y-auto">
+                <div className="max-h-[55vh] divide-y divide-line overflow-y-auto">
                   {selected.map((exercise, index) => (
                     <div className="p-4" key={exercise.id}>
                       <div className="mb-3 flex items-center gap-3">
                         <GripVertical
-                          className="shrink-0 cursor-grab text-gray-300"
+                          className="shrink-0 cursor-grab text-faint"
                           size={16}
                         />
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs text-[#7c3aed]">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs text-accent">
                           {index + 1}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm text-stone-950">
+                          <p className="truncate text-sm text-ink">
                             {exercise.nome}
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-faint">
                             {exercise.musculo}
                           </p>
                         </div>
                         <button
-                          className="rounded-lg p-1.5 text-gray-300 transition hover:bg-rose-50 hover:text-rose-400"
+                          className="rounded-lg p-1.5 text-faint transition hover:bg-rose-500/10 hover:text-rose-400"
                           onClick={() => handleRemoveExercise(exercise.id)}
                           type="button"
                         >
@@ -429,11 +484,12 @@ export const NewWorkoutModal = ({
                           ] as const
                         ).map(({ field, label }) => (
                           <div key={field}>
-                            <label className="mb-1 block text-xs text-gray-400">
+                            <label className="mb-1 block text-xs text-faint">
                               {label}
                             </label>
                             <input
-                              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-2 text-center text-sm outline-none focus:border-[#7c3aed] focus:ring-2 focus:ring-[#7c3aed]/20"
+                              className="w-full rounded-lg border border-line bg-elev px-2 py-2 text-center text-sm text-ink outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                              inputMode={field === 'series' || field === 'descanso' ? 'numeric' : undefined}
                               onChange={(event) =>
                                 handleUpdateField(
                                   exercise.id,
@@ -441,6 +497,7 @@ export const NewWorkoutModal = ({
                                   event.target.value,
                                 )
                               }
+                              pattern={field === 'series' || field === 'descanso' ? '[0-9]*' : undefined}
                               value={exercise[field]}
                             />
                           </div>
@@ -452,10 +509,10 @@ export const NewWorkoutModal = ({
               )}
 
               {selected.length > 0 ? (
-                <div className="rounded-b-2xl border-t border-gray-100 bg-gray-50/50 p-4">
-                  <div className="flex items-center justify-between text-sm text-stone-500">
+                <div className="rounded-b-2xl border-t border-line bg-elev/60 p-4">
+                  <div className="flex items-center justify-between text-sm text-mute">
                     <span>{totalSeries} series totais</span>
-                    <span className="text-[#7c3aed]">~{selected.length * 8} min</span>
+                    <span className="text-accent">~{selected.length * 8} min</span>
                   </div>
                 </div>
               ) : null}
@@ -463,28 +520,34 @@ export const NewWorkoutModal = ({
           </div>
 
           {submitError ? (
-            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div className="mt-4 text-sm text-rose-400 light:text-rose-600">
               {submitError}
             </div>
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-gray-100 p-5 sm:flex-row sm:justify-end">
+        <div className="flex flex-col gap-3 border-t border-line p-5 sm:flex-row sm:justify-end">
           <button
-            className="rounded-2xl border border-gray-200 px-4 py-3 text-sm font-medium text-stone-700 transition hover:bg-gray-50"
+            className="rounded-2xl border border-line px-4 py-3 text-sm font-medium text-ink transition hover:bg-elev"
             onClick={onClose}
             type="button"
           >
             Cancelar
           </button>
           <button
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary"
             disabled={isSubmitting}
             onClick={handleSubmit}
             type="button"
           >
             <Save size={14} />
-            {isSubmitting ? 'Salvando...' : isEditMode ? 'Salvar alteracoes' : 'Salvar e enviar ao aluno'}
+            {isSubmitting
+              ? 'Salvando...'
+              : isEditMode
+                ? 'Salvar alteracoes'
+                : studentId === 'self'
+                  ? 'Salvar meu treino'
+                  : 'Salvar e enviar ao aluno'}
           </button>
         </div>
       </div>

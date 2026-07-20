@@ -10,6 +10,7 @@ const normalizeStudent = (
     (raw.trainer as Record<string, unknown> | undefined)
 
   return {
+    ativo: (raw.ativo ?? fallback.ativo ?? true) as boolean,
     criadoEm: (raw.criadoEm ?? raw.criado_em ?? fallback.criadoEm ?? '') as string,
     historicoSaude: (raw.historicoSaude ?? raw.historico_saude ?? fallback.historicoSaude ?? null) as string | null,
     id: Number(raw.id ?? fallback.id ?? 0),
@@ -52,4 +53,40 @@ export const createStudentService = async (
     sexo: payload.sexo ?? null,
     telefone: payload.telefone,
   })
+}
+
+export const updateStudentStatusService = async (
+  id: number,
+  ativo: boolean,
+): Promise<StudentRecord> => {
+  const response = await api(`/alunos/${id}`, {
+    method: 'PATCH',
+    data: { ativo },
+  })
+
+  return normalizeStudent(response as Record<string, unknown>)
+}
+
+export interface UpdateSelfPayload {
+  nome?: string
+  telefone?: string
+  senha?: string
+  nascimento?: string
+  historicoSaude?: string
+}
+
+export const getStudentSelfService = async (): Promise<StudentRecord> => {
+  const response = await api('/alunos/me')
+  return normalizeStudent(response as Record<string, unknown>)
+}
+
+export const updateStudentSelfService = async (
+  payload: UpdateSelfPayload,
+): Promise<StudentRecord> => {
+  const response = await api('/alunos/me', {
+    method: 'PATCH',
+    data: payload,
+  })
+
+  return normalizeStudent(response as Record<string, unknown>)
 }

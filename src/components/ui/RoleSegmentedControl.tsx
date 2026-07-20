@@ -14,7 +14,7 @@ export const RoleSegmentedControl = ({
   onChange,
   value,
 }: RoleSegmentedControlProps) => (
-  <div className="grid grid-cols-2 rounded-2xl bg-[#f3f4f6] p-1">
+  <div className="grid grid-cols-2 rounded-2xl bg-elev p-1">
     {(['PERSONAL', 'ALUNO'] as UserRole[]).map((role) => {
       const isActive = role === value
 
@@ -24,8 +24,8 @@ export const RoleSegmentedControl = ({
           className={[
             'rounded-[1rem] px-4 py-3 text-sm font-medium transition',
             isActive
-              ? 'bg-white text-stone-950 shadow-sm'
-              : 'text-stone-500 hover:text-[#6d28d9]',
+              ? 'bg-surface text-ink shadow-sm'
+              : 'text-mute hover:text-accent',
           ].join(' ')}
           onClick={() => onChange(role)}
           type="button"

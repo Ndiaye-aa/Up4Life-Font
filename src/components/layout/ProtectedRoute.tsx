@@ -14,7 +14,7 @@ export const ProtectedRoute = ({
 }: ProtectedRouteProps) => {
   const { user } = useAuth()
 
-  if (!user) {
+  if (!user || !user.accessToken) {
     return <Navigate replace to="/login" />
   }
 

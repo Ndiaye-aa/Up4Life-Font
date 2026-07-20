@@ -33,7 +33,7 @@ export const NewExerciseModal = ({ onClose, onCreated }: NewExerciseModalProps) 
     setSubmitError('')
 
     if (nome.trim().length < 3) {
-      setSubmitError('Informe um nome de exercicio valido (min. 3 caracteres).')
+      setSubmitError('Informe um nome de exercício válido (min. 3 caracteres).')
       return
     }
 
@@ -54,7 +54,7 @@ export const NewExerciseModal = ({ onClose, onCreated }: NewExerciseModalProps) 
       onClose()
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : 'Nao foi possivel salvar o exercicio agora.',
+        error instanceof Error ? error.message : 'Não foi possivel salvar o exercício agora.',
       )
     } finally {
       setIsSubmitting(false)
@@ -62,20 +62,21 @@ export const NewExerciseModal = ({ onClose, onCreated }: NewExerciseModalProps) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center">
-      <div className="flex w-full flex-col rounded-t-[2rem] bg-white shadow-2xl sm:max-w-md sm:rounded-[2rem]">
-        <div className="flex items-start justify-between gap-4 border-b border-gray-100 p-5">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative flex w-full flex-col rounded-t-[2rem] border border-line bg-surface shadow-2xl sm:max-w-md sm:rounded-[2rem]">
+        <div className="flex items-start justify-between gap-4 border-b border-line p-5">
           <div>
-            <p className="text-sm uppercase tracking-[0.24em] text-[#7c3aed]">Exercicios</p>
-            <h2 className="font-display mt-2 text-2xl font-semibold text-stone-950">
-              Novo exercicio
+            <p className="text-sm uppercase tracking-[0.24em] text-accent">Exercícios</p>
+            <h2 className="font-display mt-2 text-2xl font-semibold text-ink">
+              Novo exercício
             </h2>
-            <p className="mt-1 text-sm text-stone-500">
-              Adicione uma variacao ao catalogo de exercicios.
+            <p className="mt-1 text-sm text-mute">
+              Adicione uma variação ao catálogo de exercícios.
             </p>
           </div>
           <button
-            className="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100"
+            className="rounded-xl p-2 text-faint transition hover:bg-elev"
             onClick={onClose}
             type="button"
           >
@@ -85,16 +86,16 @@ export const NewExerciseModal = ({ onClose, onCreated }: NewExerciseModalProps) 
 
         <div className="flex flex-col gap-5 overflow-y-auto p-5">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium uppercase tracking-wide text-stone-500">
-              Nome do exercicio
+            <label className="text-xs font-medium uppercase tracking-wide text-mute">
+              Nome do exercício
             </label>
             <div className="relative">
               <Dumbbell
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-faint"
                 size={16}
               />
               <input
-                className="w-full rounded-xl border border-gray-200 py-3 pl-10 pr-4 text-sm outline-none focus:border-[#7c3aed] focus:ring-4 focus:ring-[#7c3aed]/10"
+                className="field pl-10"
                 onChange={(event) => setNome(event.target.value)}
                 placeholder="Ex: Supino Reto com Barra"
                 type="text"
@@ -104,11 +105,11 @@ export const NewExerciseModal = ({ onClose, onCreated }: NewExerciseModalProps) 
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium uppercase tracking-wide text-stone-500">
+            <label className="text-xs font-medium uppercase tracking-wide text-mute">
               Grupo muscular
             </label>
             <select
-              className="w-full rounded-xl border border-gray-200 py-3 pl-4 pr-4 text-sm outline-none focus:border-[#7c3aed] focus:ring-4 focus:ring-[#7c3aed]/10"
+              className="field"
               onChange={(event) => setGrupoMuscular(event.target.value)}
               value={grupoMuscular}
             >
@@ -122,11 +123,11 @@ export const NewExerciseModal = ({ onClose, onCreated }: NewExerciseModalProps) 
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium uppercase tracking-wide text-stone-500">
-              Descricao <span className="normal-case text-gray-400">(opcional)</span>
+            <label className="text-xs font-medium uppercase tracking-wide text-mute">
+              Descrição <span className="normal-case text-faint">(opcional)</span>
             </label>
             <textarea
-              className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 text-sm outline-none focus:border-[#7c3aed] focus:ring-4 focus:ring-[#7c3aed]/10"
+              className="field resize-none"
               onChange={(event) => setDescricao(event.target.value)}
               placeholder="Ex: Executar com pegada pronada, cotovelos proximos ao corpo..."
               rows={3}
@@ -135,20 +136,20 @@ export const NewExerciseModal = ({ onClose, onCreated }: NewExerciseModalProps) 
           </div>
 
           {submitError ? (
-            <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-600">{submitError}</p>
+            <p className="text-sm text-rose-400 light:text-rose-600">{submitError}</p>
           ) : null}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-gray-100 p-5">
+        <div className="flex justify-end gap-3 border-t border-line p-5">
           <button
-            className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-stone-600 transition hover:bg-gray-50"
+            className="rounded-xl border border-line px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-elev"
             onClick={onClose}
             type="button"
           >
             Cancelar
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-xl bg-stone-950 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-50"
+            className="btn-primary rounded-xl px-5 py-2.5"
             disabled={isSubmitting}
             onClick={handleSubmit}
             type="button"
@@ -156,7 +157,7 @@ export const NewExerciseModal = ({ onClose, onCreated }: NewExerciseModalProps) 
             {isSubmitting ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
             ) : null}
-            Salvar exercicio
+            Salvar exercício
           </button>
         </div>
       </div>

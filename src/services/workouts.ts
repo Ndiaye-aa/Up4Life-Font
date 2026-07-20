@@ -17,17 +17,20 @@ function normalizeExercicios(raw: Record<string, unknown>): WorkoutRecord['exerc
 
 function normalizeWorkout(raw: Record<string, unknown>, fallback: CreateWorkoutPayload): WorkoutRecord {
   const aluno = raw.aluno as Record<string, unknown> | undefined
+  const personal = raw.personal as Record<string, unknown> | undefined
+  const rawAlunoId = raw.alunoId ?? raw.id_aluno ?? fallback.id_aluno
   return {
     id: Number(raw.id),
     nome: (raw.nome ?? raw.objetivo ?? fallback.nome) as string,
-    id_aluno: Number(raw.alunoId ?? raw.id_aluno ?? fallback.id_aluno),
-    id_personal: Number(aluno?.personalId ?? raw.idPersonal ?? raw.id_personal ?? fallback.id_personal),
-    nome_aluno: (aluno?.nome ?? raw.nomeAluno ?? raw.nome_aluno ?? fallback.nome_aluno) as string,
+    id_aluno: rawAlunoId == null ? null : Number(rawAlunoId),
+    id_personal: Number(raw.personalId ?? aluno?.personalId ?? raw.idPersonal ?? raw.id_personal ?? fallback.id_personal),
+    nome_aluno: (aluno?.nome ?? personal?.nome ?? raw.nomeAluno ?? raw.nome_aluno ?? fallback.nome_aluno ?? 'Você') as string,
     categoria: (raw.categoria ?? fallback.categoria) as WorkoutCategory,
     ativo: raw.ativo !== false,
     criado_em: (raw.criado_em ?? raw.criadoEm ?? new Date().toISOString()) as string,
     duracao_estimada: (raw.duracao_estimada ?? '—') as string,
     exercicios: normalizeExercicios(raw),
+    observacoes: (raw.observacoes ?? fallback.observacoes ?? '') as string,
   }
 }
 
@@ -43,13 +46,13 @@ export const getStudentWorkoutsService = async (alunoId: number): Promise<Workou
   return raw.map((w: Record<string, unknown>) => normalizeWorkout(w, {} as CreateWorkoutPayload))
 }
 
-export const createWorkoutService = async (
-  payload: CreateWorkoutPayload,
-): Promise<WorkoutRecord> => {
-  const backendDto = {
-    alunoId: payload.id_aluno,
-    idPersonal: payload.id_personal,
+function toBackendTreinoDto(payload: CreateWorkoutPayload) {
+  return {
+    alunoId: payload.id_aluno ?? undefined,
+    // Sem aluno, o treino é vinculado ao próprio personal (identificado pelo JWT no backend)
+    paraMim: payload.id_aluno == null ? true : undefined,
     objetivo: payload.nome,
+    observacoes: payload.observacoes || undefined,
     categoria: payload.categoria,
     itens: payload.exercicios.map((ex, index) => ({
       exercicio: ex.nome,
@@ -60,10 +63,14 @@ export const createWorkoutService = async (
       descanso: Number.parseInt(ex.descanso, 10),
     })),
   }
+}
 
+export const createWorkoutService = async (
+  payload: CreateWorkoutPayload,
+): Promise<WorkoutRecord> => {
   const response = await api('/treinos', {
     method: 'POST',
-    data: backendDto,
+    data: toBackendTreinoDto(payload),
   })
 
   return normalizeWorkout(response as Record<string, unknown>, payload)
@@ -74,7 +81,7 @@ export const updateWorkoutService = async (
 ): Promise<WorkoutRecord> => {
   const response = await api(`/treinos/${payload.id}`, {
     method: 'PATCH',
-    data: payload,
+    data: toBackendTreinoDto(payload),
   })
   return normalizeWorkout(response as Record<string, unknown>, payload)
 }

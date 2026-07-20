@@ -17,19 +17,23 @@ export interface WorkoutRecord {
   duracao_estimada: string
   exercicios: ExerciseEntry[]
   id: number
-  id_aluno: number
+  /** null quando o treino pertence ao próprio personal */
+  id_aluno: number | null
   id_personal: number
   nome: string
   nome_aluno: string
+  observacoes: string
 }
 
 export interface CreateWorkoutPayload {
   categoria: WorkoutCategory
   exercicios: ExerciseEntry[]
-  id_aluno: number
+  /** null vincula o treino ao próprio personal autenticado */
+  id_aluno: number | null
   id_personal: number
   nome: string
   nome_aluno: string
+  observacoes?: string
 }
 
 export interface UpdateWorkoutPayload extends CreateWorkoutPayload {

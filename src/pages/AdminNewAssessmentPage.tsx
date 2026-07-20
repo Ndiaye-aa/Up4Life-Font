@@ -6,11 +6,11 @@ import { DashboardShell } from '../components/layout/DashboardShell'
 import { useAuth } from '../hooks/useAuth'
 import { getDashboardNavItems } from '../utils/dashboardNav'
 import { getStudentsService } from '../services/students'
-import { createAssessmentService } from '../services/assessments'
+import { createAssessmentService, getAllAssessmentsService, type AssessmentRecord } from '../services/assessments'
 import type { StudentRecord } from '../@types/student'
 import { formatDateBR, todayBR } from '../utils/formatDate'
 
-const SECTIONS = (students: StudentRecord[]) => [
+const SECTIONS = (students: StudentRecord[], personalName?: string) => [
   {
     id: 'dados',
     title: 'Dados do Aluno',
@@ -19,7 +19,10 @@ const SECTIONS = (students: StudentRecord[]) => [
         id: 'alunoId',
         label: 'Aluno',
         type: 'select',
-        options: students.map((s) => ({ label: s.nome, value: s.id.toString() })),
+        options: [
+          { label: `Eu mesmo (${personalName ?? 'personal'})`, value: 'self' },
+          ...students.map((s) => ({ label: s.nome, value: s.id.toString() })),
+        ],
         colSpan: 'col-span-2 sm:col-span-4',
       },
       { id: 'date', label: 'Data da avaliação', type: 'text', placeholder: 'DD/MM/AAAA', colSpan: '' },
@@ -97,24 +100,31 @@ const maskDate = (value: string): string => {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
 }
 
+const STATUS_COLORS = {
+  blue: 'text-blue-400 light:text-blue-600',
+  emerald: 'text-emerald-400 light:text-emerald-600',
+  amber: 'text-amber-400 light:text-amber-600',
+  rose: 'text-rose-400 light:text-rose-600',
+}
+
 function getIMCStatus(imc: number): { color: string; label: string } {
-  if (imc < 18.5) return { color: 'text-blue-600', label: 'Abaixo do peso' }
-  if (imc < 25) return { color: 'text-emerald-600', label: 'Normal' }
-  if (imc < 30) return { color: 'text-amber-600', label: 'Sobrepeso' }
-  return { color: 'text-rose-600', label: 'Obesidade' }
+  if (imc < 18.5) return { color: STATUS_COLORS.blue, label: 'Abaixo do peso' }
+  if (imc < 25) return { color: STATUS_COLORS.emerald, label: 'Normal' }
+  if (imc < 30) return { color: STATUS_COLORS.amber, label: 'Sobrepeso' }
+  return { color: STATUS_COLORS.rose, label: 'Obesidade' }
 }
 
 function getBodyFatStatus(pct: number, sexo: string): { color: string; label: string } {
   if (sexo === 'M') {
-    if (pct < 6) return { color: 'text-blue-600', label: 'Abaixo do ideal' }
-    if (pct < 18) return { color: 'text-emerald-600', label: 'Adequado' }
-    if (pct < 25) return { color: 'text-amber-600', label: 'Acima do ideal' }
-    return { color: 'text-rose-600', label: 'Obesidade' }
+    if (pct < 6) return { color: STATUS_COLORS.blue, label: 'Abaixo do ideal' }
+    if (pct < 18) return { color: STATUS_COLORS.emerald, label: 'Adequado' }
+    if (pct < 25) return { color: STATUS_COLORS.amber, label: 'Acima do ideal' }
+    return { color: STATUS_COLORS.rose, label: 'Obesidade' }
   }
-  if (pct < 14) return { color: 'text-blue-600', label: 'Abaixo do ideal' }
-  if (pct < 25) return { color: 'text-emerald-600', label: 'Adequado' }
-  if (pct < 32) return { color: 'text-amber-600', label: 'Acima do ideal' }
-  return { color: 'text-rose-600', label: 'Obesidade' }
+  if (pct < 14) return { color: STATUS_COLORS.blue, label: 'Abaixo do ideal' }
+  if (pct < 25) return { color: STATUS_COLORS.emerald, label: 'Adequado' }
+  if (pct < 32) return { color: STATUS_COLORS.amber, label: 'Acima do ideal' }
+  return { color: STATUS_COLORS.rose, label: 'Obesidade' }
 }
 
 export const AdminNewAssessmentPage = () => {
@@ -131,24 +141,57 @@ export const AdminNewAssessmentPage = () => {
   })
   const [observations, setObservations] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
 
   useEffect(() => {
     getStudentsService()
       .then((data) => {
         setStudents(data)
         if (data.length > 0) {
-          setValues((prev) => ({ ...prev, alunoId: data[0].id.toString() }))
+          setValues((prev) => ({
+            ...prev,
+            alunoId: data[0].id.toString(),
+            sexo: data[0].sexo ?? prev.sexo,
+          }))
+        } else {
+          setValues((prev) => ({ ...prev, alunoId: 'self' }))
         }
       })
       .finally(() => setIsLoadingStudents(false))
+
+    getAllAssessmentsService()
+      .then(setAssessments)
+      .catch(() => setAssessments([]))
   }, [])
+
+  const stats = useMemo(() => {
+    const now = new Date()
+    const thisMonth = assessments.filter((a) => {
+      const d = new Date(a.dataAvaliacao)
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    }).length
+
+    const avaliados = new Set(
+      assessments.filter((a) => a.alunoId != null).map((a) => a.alunoId),
+    ).size
+    const pendentes = Math.max(0, students.length - avaliados)
+
+    return { avaliados, pendentes, thisMonth }
+  }, [assessments, students])
 
   const toggle = (id: string) =>
     setExpanded((prev) => (prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]))
 
   const handleChange = (id: string, value: string) => {
     const masked = id === 'date' ? maskDate(value) : value
-    setValues((prev) => ({ ...prev, [id]: masked }))
+    setValues((prev) => {
+      const next = { ...prev, [id]: masked }
+      if (id === 'alunoId') {
+        const sexo = students.find((s) => s.id.toString() === value)?.sexo
+        if (sexo) next.sexo = sexo
+      }
+      return next
+    })
     if (errors[id]) setErrors((prev) => { const next = { ...prev }; delete next[id]; return next })
   }
 
@@ -203,29 +246,25 @@ export const AdminNewAssessmentPage = () => {
 
   const previewCards = [
     {
-      bg: computed.imc != null ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100',
-      color: imcStatus?.color ?? 'text-gray-400',
+      color: imcStatus?.color ?? 'text-faint',
       label: 'IMC',
       status: imcStatus?.label ?? '—',
       value: computed.imc != null ? computed.imc.toFixed(1) : '—',
     },
     {
-      bg: computed.gordura != null ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100',
-      color: fatStatus?.color ?? 'text-gray-400',
+      color: fatStatus?.color ?? 'text-faint',
       label: '% Gordura',
       status: fatStatus?.label ?? '—',
       value: computed.gordura != null ? `${computed.gordura.toFixed(1)}%` : '—',
     },
     {
-      bg: computed.iac != null ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100',
-      color: computed.iac != null ? 'text-blue-600' : 'text-gray-400',
+      color: computed.iac != null ? STATUS_COLORS.blue : 'text-faint',
       label: 'IAC',
       status: computed.iac != null ? 'Normal' : '—',
       value: computed.iac != null ? computed.iac.toFixed(1) : '—',
     },
     {
-      bg: computed.massaMagra != null ? 'bg-purple-50 border-purple-100' : 'bg-gray-50 border-gray-100',
-      color: computed.massaMagra != null ? 'text-purple-600' : 'text-gray-400',
+      color: computed.massaMagra != null ? 'text-accent' : 'text-faint',
       label: 'Massa Magra',
       status: computed.massaMagra != null ? 'Calculado' : '—',
       value: computed.massaMagra != null ? `${computed.massaMagra.toFixed(1)} kg` : '—',
@@ -243,7 +282,7 @@ export const AdminNewAssessmentPage = () => {
       }
       setErrors(fieldErrors)
 
-      const sectionsWithErrors = SECTIONS(students)
+      const sectionsWithErrors = SECTIONS(students, user?.name)
         .filter((s) => s.fields.some((f) => fieldErrors[f.id]))
         .map((s) => s.id)
       setExpanded((prev) => [...new Set([...prev, ...sectionsWithErrors])])
@@ -254,8 +293,11 @@ export const AdminNewAssessmentPage = () => {
     setIsSubmitting(true)
 
     try {
+      const isSelf = values.alunoId === 'self'
       const payload = {
-        alunoId: parseInt(values.alunoId),
+        ...(isSelf
+          ? { paraMim: true, sexo: (values.sexo || 'F') as 'M' | 'F' }
+          : { alunoId: parseInt(values.alunoId) }),
         peso: parseFloat(values.peso),
         altura: parseFloat(values.altura) / 100,
         idade: parseInt(values.idade),
@@ -268,14 +310,23 @@ export const AdminNewAssessmentPage = () => {
         abdominal: values.abdominal ? parseFloat(values.abdominal) : undefined,
         supraIliaca: values.supraIliaca ? parseFloat(values.supraIliaca) : undefined,
         coxa: values.coxa ? parseFloat(values.coxa) : undefined,
+        perimetroTorax: values.torax ? parseFloat(values.torax) : undefined,
+        perimetroAbdomen: values.abdomen ? parseFloat(values.abdomen) : undefined,
+        perimetroCoxa: values.thigh ? parseFloat(values.thigh) : undefined,
+        perimetroPanturrilha: values.calf ? parseFloat(values.calf) : undefined,
+        perimetroBraco: values.arm ? parseFloat(values.arm) : undefined,
+        perimetroAntebraco: values.forearm ? parseFloat(values.forearm) : undefined,
       }
 
       const assessment = await createAssessmentService(payload)
-      const studentName = students.find((s) => s.id === assessment.alunoId)?.nome ?? 'Aluno'
+      const studentName =
+        assessment.alunoId == null
+          ? (user?.name ?? 'Você')
+          : (students.find((s) => s.id === assessment.alunoId)?.nome ?? 'Aluno')
 
       navigate('/dashboard/admin/avaliacoes/resultados', {
         state: {
-          alunoId: assessment.alunoId,
+          alunoId: assessment.alunoId ?? undefined,
           bmi: assessment.imc != null ? parseFloat(String(assessment.imc)).toFixed(1) : '—',
           bodyFat: assessment.percentualGordura != null ? `${parseFloat(String(assessment.percentualGordura)).toFixed(1)}%` : '—',
           date: formatDateBR(assessment.dataAvaliacao),
@@ -315,30 +366,29 @@ export const AdminNewAssessmentPage = () => {
         navigate('/login')
       }}
       overviewItems={[
-        { label: 'Mes', value: '8' },
-        { label: 'Avaliados', value: '6' },
-        { label: 'Pendentes', value: '4' },
+        { label: 'Mes', value: String(stats.thisMonth) },
+        { label: 'Avaliados', value: String(stats.avaliados) },
+        { label: 'Pendentes', value: String(stats.pendentes) },
       ]}
       roleLabel="Personal Trainer"
-      subtitle="Preencha as medidas para calcular os indices de composicao corporal."
       tone="personal"
     >
       <div className="space-y-4 pb-8">
         {/* Header */}
         <div className="flex items-center gap-3">
           <button
-            className="flex-shrink-0 rounded-xl p-2 text-gray-500 transition hover:bg-gray-100"
+            className="flex-shrink-0 rounded-xl p-2 text-mute transition hover:bg-elev"
             onClick={() => navigate(-1)}
             type="button"
           >
             <ArrowLeft size={18} />
           </button>
           <div className="min-w-0 flex-1">
-            <p className="text-sm uppercase tracking-[0.24em] text-[#7c3aed]">Nova</p>
-            <h1 className="font-display text-2xl font-semibold text-stone-950">
+            <p className="text-sm uppercase tracking-[0.24em] text-accent">Nova</p>
+            <h1 className="font-display text-2xl font-semibold text-ink">
               Nova Avaliação
             </h1>
-            <p className="mt-0.5 text-xs text-stone-500">
+            <p className="mt-0.5 text-xs text-mute">
               Insira as medidas para calcular os índices de composição corporal
             </p>
           </div>
@@ -346,80 +396,70 @@ export const AdminNewAssessmentPage = () => {
 
         {/* Global error banner */}
         {totalErrors > 0 && (
-          <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
-            <AlertCircle className="flex-shrink-0 text-rose-500" size={16} />
-            <p className="text-sm text-rose-700">
-              {totalErrors === 1
-                ? '1 campo obrigatório não preenchido.'
-                : `${totalErrors} campos obrigatórios não preenchidos.`}
-            </p>
-          </div>
+          <p className="flex items-center gap-2 text-sm text-rose-400 light:text-rose-600">
+            <AlertCircle className="flex-shrink-0" size={16} />
+            {totalErrors === 1
+              ? '1 campo obrigatório não preenchido.'
+              : `${totalErrors} campos obrigatórios não preenchidos.`}
+          </p>
         )}
 
-        {/* Preview cards */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {/* Preview: indices calculados em uma unica faixa */}
+        <div className="card grid grid-cols-2 lg:grid-cols-4">
           {previewCards.map((card) => (
-            <div
-              key={card.label}
-              className={`${card.bg} rounded-2xl border p-3 text-center transition-colors`}
-            >
+            <div key={card.label} className="p-3 text-center">
               <p className={`text-lg font-semibold ${card.color}`}>{card.value}</p>
-              <p className="text-xs text-gray-500">{card.label}</p>
+              <p className="text-xs text-mute">{card.label}</p>
               <p className={`mt-0.5 text-xs ${card.color}`}>{card.status}</p>
             </div>
           ))}
         </div>
 
-        {/* Expandable sections */}
-        <div className="space-y-3">
-          {SECTIONS(students).map((section) => {
+        {/* Secoes do formulario em um unico cartao */}
+        <div className="card divide-y divide-line overflow-hidden">
+          {SECTIONS(students, user?.name).map((section) => {
             const isOpen = expanded.includes(section.id)
             const sectionHasErrors = section.fields.some((f) => errors[f.id])
 
             return (
-              <div
-                key={section.id}
-                className={`overflow-hidden rounded-[1.5rem] border bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)] transition-colors ${
-                  sectionHasErrors ? 'border-rose-200' : 'border-[#e5e7eb]'
-                }`}
-              >
+              <div key={section.id}>
                 <button
-                  className="flex w-full items-center justify-between p-5 transition hover:bg-gray-50"
+                  className="flex w-full items-center justify-between p-5 transition hover:bg-elev"
                   onClick={() => toggle(section.id)}
                   type="button"
                 >
                   <div className="flex items-center gap-2">
-                    <h2 className="font-display text-base font-semibold text-stone-950">
+                    <h2 className="font-display text-base font-semibold text-ink">
                       {section.title}
                     </h2>
                     {sectionHasErrors && (
-                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-600">
+                      <span className="rounded-full bg-rose-500/12 px-2 py-0.5 text-xs font-medium text-rose-400 light:bg-rose-100 light:text-rose-600">
                         {section.fields.filter((f) => errors[f.id]).length} pendente
                         {section.fields.filter((f) => errors[f.id]).length > 1 ? 's' : ''}
                       </span>
                     )}
                   </div>
                   {isOpen ? (
-                    <ChevronUp className="text-gray-400" size={18} />
+                    <ChevronUp className="text-faint" size={18} />
                   ) : (
-                    <ChevronDown className="text-gray-400" size={18} />
+                    <ChevronDown className="text-faint" size={18} />
                   )}
                 </button>
 
                 {isOpen && (
-                  <div className="border-t border-gray-50 px-5 pb-5">
-                    <div className="grid grid-cols-2 gap-3 pt-4 sm:grid-cols-4">
+                  <div className="px-5 pb-5">
+                    <div className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-4">
                       {section.fields.map((field) => {
                         const hasError = Boolean(errors[field.id])
-                        const inputClass = `w-full rounded-2xl border bg-gray-50 px-3 py-3 text-sm outline-none transition focus:bg-white focus:ring-4 ${
+                        const inputClass = `w-full rounded-2xl border bg-elev px-3 py-3 text-sm text-ink outline-none transition focus:bg-surface focus:ring-4 ${
                           hasError
-                            ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-500/10'
-                            : 'border-gray-200 focus:border-[#7c3aed] focus:ring-[#7c3aed]/10'
+                            ? 'border-rose-400/60 focus:border-rose-400 focus:ring-rose-500/10'
+                            : 'border-line focus:border-accent focus:ring-accent/15'
                         }`
 
                         return (
                           <div key={field.id} className={field.colSpan}>
-                            <label className="mb-1.5 block text-xs font-medium text-stone-600">
+                            <label className="mb-1.5 block text-xs font-medium text-mute">
                               {field.label}
                               <span className="ml-0.5 text-rose-400">*</span>
                             </label>
@@ -445,7 +485,7 @@ export const AdminNewAssessmentPage = () => {
                               />
                             )}
                             {hasError && (
-                              <p className="mt-1 text-xs text-rose-600">{errors[field.id]}</p>
+                              <p className="mt-1 text-xs text-rose-400 light:text-rose-600">{errors[field.id]}</p>
                             )}
                           </div>
                         )
@@ -456,26 +496,26 @@ export const AdminNewAssessmentPage = () => {
               </div>
             )
           })}
-        </div>
 
-        {/* Observations (optional) */}
-        <div className="overflow-hidden rounded-[1.5rem] border border-[#e5e7eb] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-          <h2 className="font-display mb-3 text-base font-semibold text-stone-950">
-            Observações
-            <span className="ml-2 text-xs font-normal text-stone-400">(opcional)</span>
-          </h2>
-          <textarea
-            className="w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm outline-none transition focus:border-[#7c3aed] focus:bg-white focus:ring-4 focus:ring-[#7c3aed]/10"
-            onChange={(e) => setObservations(e.target.value)}
-            placeholder="Observações gerais sobre a avaliação, condições do dia, etc..."
-            rows={3}
-            value={observations}
-          />
+          {/* Observacoes (opcional) na mesma superficie */}
+          <div className="p-5">
+            <h2 className="font-display mb-3 text-base font-semibold text-ink">
+              Observações
+              <span className="ml-2 text-xs font-normal text-faint">(opcional)</span>
+            </h2>
+            <textarea
+              className="field resize-none rounded-2xl"
+              onChange={(e) => setObservations(e.target.value)}
+              placeholder="Observações gerais sobre a avaliação, condições do dia, etc..."
+              rows={3}
+              value={observations}
+            />
+          </div>
         </div>
 
         {/* Save button */}
         <button
-          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-stone-950 py-4 text-sm font-medium text-white transition hover:bg-stone-800 disabled:opacity-50"
+          className="btn-primary w-full py-4"
           disabled={isSubmitting || isLoadingStudents}
           onClick={handleSave}
           type="button"

@@ -22,49 +22,61 @@ export const App = (): ReactElement => (
     <Route element={<LoginPage />} path="/login" />
     <Route
       element={
-        <ProtectedRoute allowedRoles={['PERSONAL']}>
-          <AdminDashboardPage />
-        </ProtectedRoute>
+        <ErrorBoundary>
+          <ProtectedRoute allowedRoles={['PERSONAL']}>
+            <AdminDashboardPage />
+          </ProtectedRoute>
+        </ErrorBoundary>
       }
       path="/dashboard/admin"
     />
     <Route
       element={
-        <ProtectedRoute allowedRoles={['PERSONAL']}>
-          <AdminWorkoutsPage />
-        </ProtectedRoute>
+        <ErrorBoundary>
+          <ProtectedRoute allowedRoles={['PERSONAL']}>
+            <AdminWorkoutsPage />
+          </ProtectedRoute>
+        </ErrorBoundary>
       }
       path="/dashboard/admin/treinos"
     />
     <Route
       element={
-        <ProtectedRoute allowedRoles={['PERSONAL']}>
-          <AdminAssessmentsPage />
-        </ProtectedRoute>
+        <ErrorBoundary>
+          <ProtectedRoute allowedRoles={['PERSONAL']}>
+            <AdminAssessmentsPage />
+          </ProtectedRoute>
+        </ErrorBoundary>
       }
       path="/dashboard/admin/avaliacoes"
     />
     <Route
       element={
-        <ProtectedRoute allowedRoles={['PERSONAL']}>
-          <AdminNewAssessmentPage />
-        </ProtectedRoute>
+        <ErrorBoundary>
+          <ProtectedRoute allowedRoles={['PERSONAL']}>
+            <AdminNewAssessmentPage />
+          </ProtectedRoute>
+        </ErrorBoundary>
       }
       path="/dashboard/admin/avaliacoes/nova"
     />
     <Route
       element={
-        <ProtectedRoute allowedRoles={['PERSONAL']}>
-          <AdminAssessmentResultsPage />
-        </ProtectedRoute>
+        <ErrorBoundary>
+          <ProtectedRoute allowedRoles={['PERSONAL']}>
+            <AdminAssessmentResultsPage />
+          </ProtectedRoute>
+        </ErrorBoundary>
       }
       path="/dashboard/admin/avaliacoes/resultados"
     />
     <Route
       element={
-        <ProtectedRoute allowedRoles={['PERSONAL']}>
-          <AdminProfilePage />
-        </ProtectedRoute>
+        <ErrorBoundary>
+          <ProtectedRoute allowedRoles={['PERSONAL']}>
+            <AdminProfilePage />
+          </ProtectedRoute>
+        </ErrorBoundary>
       }
       path="/dashboard/admin/perfil"
     />

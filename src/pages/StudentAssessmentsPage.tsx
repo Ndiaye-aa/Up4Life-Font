@@ -12,6 +12,7 @@ import {
   YAxis,
 } from 'recharts'
 import { DashboardShell } from '../components/layout/DashboardShell'
+import { PageHeader } from '../components/ui/PageHeader'
 import { useAuth } from '../hooks/useAuth'
 import { type AssessmentRecord, getStudentAssessmentsService } from '../services/assessments'
 import { getDashboardNavItems } from '../utils/dashboardNav'
@@ -29,10 +30,10 @@ function imcStatus(imc: number): string {
 }
 
 function imcStatusColor(status: string): string {
-  if (status === 'Normal') return 'bg-emerald-50 text-emerald-600'
-  if (status === 'Abaixo') return 'bg-blue-50 text-blue-600'
-  if (status === 'Sobrepeso') return 'bg-amber-50 text-amber-600'
-  return 'bg-red-50 text-red-600'
+  if (status === 'Normal') return 'bg-emerald-500/12 text-emerald-400 light:bg-emerald-50 light:text-emerald-600'
+  if (status === 'Abaixo') return 'bg-blue-500/12 text-blue-400 light:bg-blue-50 light:text-blue-600'
+  if (status === 'Sobrepeso') return 'bg-amber-500/12 text-amber-400 light:bg-amber-50 light:text-amber-600'
+  return 'bg-rose-500/12 text-rose-400 light:bg-rose-50 light:text-rose-600'
 }
 
 function calcMassaMagra(a: AssessmentRecord): number | null {
@@ -91,56 +92,44 @@ export const StudentAssessmentsPage = () => {
     ? [
         {
           icon: Scale,
-          iconBg: 'bg-indigo-50',
-          iconColor: 'bg-purple-50 text-[#A020F0]',
           label: 'IMC',
           progress: selectedAssessment.imc ? Math.min(100, (selectedAssessment.imc / 40) * 100) : 0,
-          progressColor: 'bg-purple-50 text-[#A020F0]',
           range: '18.5 – 24.9',
           status: selectedAssessment.imc ? imcStatus(selectedAssessment.imc) : '—',
-          statusColor: selectedAssessment.imc ? imcStatusColor(imcStatus(selectedAssessment.imc)) : 'bg-purple-50 text-[#A020F0]',
+          statusColor: selectedAssessment.imc ? imcStatusColor(imcStatus(selectedAssessment.imc)) : 'bg-accent-soft text-accent',
           trend: getTrend(selectedAssessment.imc, previousAssessment?.imc),
           unit: 'kg/m²',
           value: selectedAssessment.imc?.toFixed(1) ?? '—',
         },
         {
           icon: Activity,
-          iconBg: 'bg-blue-50',
-          iconColor: 'bg-purple-50 text-[#A020F0]',
           label: '% Gordura',
           progress: selectedAssessment.percentualGordura ? Math.min(100, (selectedAssessment.percentualGordura / 40) * 100) : 0,
-          progressColor: 'bg-purple-50 text-[#A020F0]',
           range: 'Pollock 7 Dobras',
           status: selectedAssessment.percentualGordura != null ? 'Calculado' : '—',
-          statusColor: 'bg-purple-50 text-[#A020F0]',
+          statusColor: 'bg-accent-soft text-accent',
           trend: getTrend(selectedAssessment.percentualGordura, previousAssessment?.percentualGordura),
           unit: '%',
           value: selectedAssessment.percentualGordura?.toFixed(1) ?? '—',
         },
         {
           icon: Heart,
-          iconBg: 'bg-rose-50',
-          iconColor: 'bg-purple-50 text-[#A020F0]',
           label: 'IAC',
           progress: selectedAssessment.iac ? Math.min(100, (selectedAssessment.iac / 40) * 100) : 0,
-          progressColor: 'bg-purple-50 text-[#A020F0]',
           range: 'Adiposidade',
           status: selectedAssessment.iac != null ? 'Normal' : '—',
-          statusColor: 'bg-purple-50 text-[#A020F0]',
+          statusColor: 'bg-accent-soft text-accent',
           trend: getTrend(selectedAssessment.iac, previousAssessment?.iac),
           unit: '',
           value: selectedAssessment.iac?.toFixed(1) ?? '—',
         },
         {
           icon: Dumbbell,
-          iconBg: 'bg-emerald-50',
-          iconColor: 'bg-purple-50 text-[#A020F0]',
           label: 'Massa Magra',
           progress: massaMagra ? Math.min(100, (massaMagra / 100) * 100) : 0,
-          progressColor: 'bg-purple-50 text-[#A020F0]',
           range: 'Referência pessoal',
           status: massaMagra != null ? 'Calculado' : '—',
-          statusColor: 'bg-purple-50 text-[#A020F0]',
+          statusColor: 'bg-accent-soft text-accent',
           trend: getTrend(massaMagra, prevMassaMagra),
           unit: 'kg',
           value: massaMagra?.toFixed(1) ?? '—',
@@ -184,11 +173,14 @@ export const StudentAssessmentsPage = () => {
       ]
 
   const tooltipStyle = {
-    border: '1px solid #e5e7eb',
+    backgroundColor: 'var(--ui-surface)',
+    border: '1px solid var(--ui-line)',
     borderRadius: '12px',
     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+    color: 'var(--ui-ink)',
     fontSize: '12px',
   }
+  const chartTick = { fill: 'var(--ui-faint)', fontSize: 10 }
 
   return (
     <DashboardShell
@@ -201,30 +193,27 @@ export const StudentAssessmentsPage = () => {
       }}
       overviewItems={overviewItems}
       roleLabel="Aluno"
-      subtitle="Historico pessoal de composicao corporal com leitura simples e direta."
       tone="student"
     >
       <div className="space-y-6">
-        <section className="rounded-[2rem] border border-[#e5e7eb] bg-white p-6 shadow-[0_16px_48px_rgba(15,23,42,0.08)]">
-          <p className="text-sm uppercase tracking-[0.24em] text-[#7c3aed]">Avaliações</p>
-          <h1 className="font-display mt-2 text-3xl font-semibold text-stone-950">Minha evolução</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">
-            Consulte o histórico de avaliação e acompanhe como os indicadores mudaram ao longo do tempo.
-          </p>
-        </section>
+        <PageHeader
+          description=" "
+          eyebrow="Avaliações"
+          title=" "
+        />
 
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="animate-spin text-[#7c3aed]" size={24} />
+            <Loader2 className="animate-spin text-accent" size={24} />
           </div>
         )}
 
         {!loading && error && (
-          <div className="rounded-[2rem] border border-red-100 bg-red-50 p-10 text-center shadow-[0_16px_48px_rgba(15,23,42,0.08)]">
-            <p className="text-sm text-red-600">{error}</p>
+          <div className="py-10 text-center">
+            <p className="text-sm text-rose-400 light:text-rose-600">{error}</p>
             {user?.id && (
               <button
-                className="mt-4 rounded-full bg-[#7c3aed] px-4 py-2 text-xs text-white hover:bg-[#6d28d9]"
+                className="btn-primary mt-4 rounded-full px-4 py-2 text-xs"
                 onClick={() => fetchAssessments(user.id)}
                 type="button"
               >
@@ -235,33 +224,33 @@ export const StudentAssessmentsPage = () => {
         )}
 
         {!loading && !error && assessments.length === 0 && (
-          <div className="rounded-[2rem] border border-[#e5e7eb] bg-white p-10 text-center shadow-[0_16px_48px_rgba(15,23,42,0.08)]">
-            <p className="text-sm text-stone-400">Nenhuma avaliacao registrada.</p>
+          <div className="rounded-[2rem] border border-dashed border-line p-10 text-center">
+            <p className="text-sm text-faint">Nenhuma avaliação registrada.</p>
           </div>
         )}
 
         {!loading && selectedAssessment && (
           <>
             {/* Unified info block: assessment date + student personal data */}
-            <section className="rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+            <section className="card p-6">
               <div className="mb-5 flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <p className="mb-1 text-xs font-medium uppercase tracking-widest text-stone-400">
+                  <p className="mb-1 text-xs font-medium uppercase tracking-widest text-faint">
                     {user?.name ?? 'Aluno'}
                   </p>
                   <div className="flex items-center gap-2">
-                    <Calendar className="text-[#7c3aed]" size={14} />
-                    <p className="text-sm font-medium text-stone-600">
+                    <Calendar className="text-accent" size={14} />
+                    <p className="text-sm font-medium text-mute">
                       Avaliação de{' '}
-                      <span className="font-semibold text-stone-950">{formatDate(selectedAssessment.dataAvaliacao)}</span>
+                      <span className="font-semibold text-ink">{formatDate(selectedAssessment.dataAvaliacao)}</span>
                     </p>
                     {selectedAssessment.id === assessments[0]?.id && (
-                      <span className="rounded-full bg-purple-50 px-2 py-0.5 text-xs text-[#7c3aed]">Mais recente</span>
+                      <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent">Mais recente</span>
                     )}
                   </div>
                 </div>
               </div>
-              <div className="mb-5 border-t border-[#e5e7eb]" />
+              <div className="mb-5 border-t border-line" />
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 {[
                   { label: 'Peso', value: `${selectedAssessment.peso} kg` },
@@ -270,50 +259,47 @@ export const StudentAssessmentsPage = () => {
                   { label: 'Massa Magra', value: massaMagra != null ? `${massaMagra} kg` : '—' },
                 ].map((item) => (
                   <article key={item.label}>
-                    <p className="text-sm text-stone-500">{item.label}</p>
-                    <p className="mt-3 text-3xl font-semibold text-stone-950">{item.value}</p>
+                    <p className="text-sm text-mute">{item.label}</p>
+                    <p className="mt-3 text-3xl font-semibold text-ink">{item.value}</p>
                   </article>
                 ))}
               </div>
             </section>
 
-            {/* Metric cards with trends */}
-            <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {/* Indices com tendencia em uma unica superficie */}
+            <section className="card grid grid-cols-2 lg:grid-cols-4">
               {metrics.map((m) => (
-                <div
-                  key={m.label}
-                  className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
-                >
+                <div key={m.label} className="p-4">
                   <div className="mb-2 flex items-center justify-between">
-                    <div className={`${m.iconBg} rounded-xl p-2`}>
-                      <m.icon className={m.iconColor} size={16} />
+                    <div className="rounded-xl bg-accent-soft p-2">
+                      <m.icon className="text-accent" size={16} />
                     </div>
                     {m.trend !== null ? (
                       <div
                         className={`flex items-center gap-1 text-xs ${
-                          m.trend < 0 ? 'text-emerald-600' : m.trend > 0 ? 'text-blue-600' : 'text-gray-400'
+                          m.trend < 0 ? 'text-emerald-400 light:text-emerald-600' : m.trend > 0 ? 'text-blue-400 light:text-blue-600' : 'text-faint'
                         }`}
                       >
                         {m.trend < 0 ? <TrendingDown size={13} /> : m.trend > 0 ? <TrendingUp size={13} /> : <Minus size={13} />}
                         {Math.abs(m.trend)}{m.unit}
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-300">—</span>
+                      <span className="text-xs text-faint">—</span>
                     )}
                   </div>
-                  <p className="text-2xl text-stone-950">
+                  <p className="text-2xl text-ink">
                     {m.value}
-                    {m.unit && <span className="ml-1 text-xs text-stone-400">{m.unit}</span>}
+                    {m.unit && <span className="ml-1 text-xs text-faint">{m.unit}</span>}
                   </p>
-                  <p className="mt-0.5 text-xs text-stone-500">{m.label}</p>
+                  <p className="mt-0.5 text-xs text-mute">{m.label}</p>
                   <div className="mt-2">
-                    <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
-                      <div className={`h-full ${m.progressColor} rounded-full`} style={{ width: `${m.progress}%` }} />
+                    <div className="h-1.5 overflow-hidden rounded-full bg-elev">
+                      <div className="h-full rounded-full bg-accent-strong" style={{ width: `${m.progress}%` }} />
                     </div>
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span className={`rounded-full px-2 py-0.5 text-xs ${m.statusColor}`}>{m.status}</span>
-                    <span className="text-xs text-stone-400">{m.range}</span>
+                    <span className="text-xs text-faint">{m.range}</span>
                   </div>
                 </div>
               ))}
@@ -322,14 +308,14 @@ export const StudentAssessmentsPage = () => {
             {/* Charts */}
             {chartData.length > 1 && (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-                  <h2 className="font-display text-base font-semibold text-stone-950">Peso &amp; % Gordura</h2>
-                  <p className="mb-4 text-xs text-stone-400">Evolução histórica</p>
+                <div className="card p-5">
+                  <h2 className="font-display text-base font-semibold text-ink">Peso &amp; % Gordura</h2>
+                  <p className="mb-4 text-xs text-faint">Evolução histórica</p>
                   <ResponsiveContainer height={180} width="100%">
                     <LineChart data={chartData}>
-                      <CartesianGrid stroke="#f0f0f0" strokeDasharray="3 3" />
-                      <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                      <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} width={30} />
+                      <CartesianGrid stroke="var(--ui-line)" strokeDasharray="3 3" />
+                      <XAxis dataKey="month" tick={chartTick} />
+                      <YAxis tick={chartTick} width={30} />
                       <Tooltip contentStyle={tooltipStyle} />
                       <Legend wrapperStyle={{ fontSize: '11px' }} />
                       <Line connectNulls dataKey="weight" dot={{ fill: '#8b5cf6', r: 3 }} name="Peso (kg)" stroke="#8b5cf6" strokeWidth={2} type="monotone" />
@@ -338,14 +324,14 @@ export const StudentAssessmentsPage = () => {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="rounded-2xl border border-[#e5e7eb] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-                  <h2 className="font-display text-base font-semibold text-stone-950">Massa Muscular</h2>
-                  <p className="mb-4 text-xs text-stone-400">Evolução histórica</p>
+                <div className="card p-5">
+                  <h2 className="font-display text-base font-semibold text-ink">Massa Muscular</h2>
+                  <p className="mb-4 text-xs text-faint">Evolução histórica</p>
                   <ResponsiveContainer height={180} width="100%">
                     <LineChart data={chartData}>
-                      <CartesianGrid stroke="#f0f0f0" strokeDasharray="3 3" />
-                      <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 10 }} />
-                      <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} width={30} />
+                      <CartesianGrid stroke="var(--ui-line)" strokeDasharray="3 3" />
+                      <XAxis dataKey="month" tick={chartTick} />
+                      <YAxis tick={chartTick} width={30} />
                       <Tooltip contentStyle={tooltipStyle} />
                       <Legend wrapperStyle={{ fontSize: '11px' }} />
                       <Line connectNulls dataKey="muscle" dot={{ fill: '#10b981', r: 3 }} name="Massa magra (kg)" stroke="#10b981" strokeWidth={2} type="monotone" />
@@ -357,27 +343,27 @@ export const StudentAssessmentsPage = () => {
 
             {/* Perimeters */}
             {perimetros.length > 0 && (
-              <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-                <div className="border-b border-gray-100 p-5">
-                  <h2 className="font-display text-base font-semibold text-stone-950">Perímetros</h2>
-                  <p className="mt-0.5 text-xs text-stone-400">Atual vs. avaliação anterior</p>
+              <div className="card overflow-hidden">
+                <div className="border-b border-line p-5">
+                  <h2 className="font-display text-base font-semibold text-ink">Perímetros</h2>
+                  <p className="mt-0.5 text-xs text-faint">Atual vs. avaliação anterior</p>
                 </div>
-                <div className="divide-y divide-gray-50">
+                <div className="divide-y divide-line">
                   {perimetros.map((p) => {
                     const diff = p.prev != null ? parseFloat((p.value! - p.prev).toFixed(1)) : null
                     return (
                       <div key={p.label} className="flex items-center gap-3 px-5 py-3">
-                        <span className="w-24 flex-shrink-0 text-sm text-stone-600">{p.label}</span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+                        <span className="w-24 flex-shrink-0 text-sm text-mute">{p.label}</span>
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-elev">
                           <div
-                            className="h-full rounded-full bg-purple-400"
+                            className="h-full rounded-full bg-accent-strong"
                             style={{ width: `${Math.min(100, (p.value! / 120) * 100)}%` }}
                           />
                         </div>
                         <div className="flex flex-shrink-0 items-center gap-2">
-                          <span className="text-sm text-stone-950">{p.value} cm</span>
+                          <span className="text-sm text-ink">{p.value} cm</span>
                           {diff !== null && (
-                            <span className={`text-xs ${diff < 0 ? 'text-emerald-600' : diff > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                            <span className={`text-xs ${diff < 0 ? 'text-emerald-400 light:text-emerald-600' : diff > 0 ? 'text-blue-400 light:text-blue-600' : 'text-faint'}`}>
                               {diff > 0 ? '+' : ''}{diff} cm
                             </span>
                           )}
@@ -393,33 +379,33 @@ export const StudentAssessmentsPage = () => {
 
         {/* History list */}
         {!loading && assessments.length > 0 && (
-          <section className="rounded-[2rem] border border-[#e5e7eb] bg-white shadow-[0_16px_48px_rgba(15,23,42,0.08)]">
-            <div className="border-b border-gray-100 p-4">
-              <h2 className="font-display text-2xl font-semibold text-stone-950">Hitórico de Avaliações</h2>
+          <section className="card rounded-[2rem]">
+            <div className="border-b border-line p-4">
+              <h2 className="font-display text-2xl font-semibold text-ink">Hitórico de Avaliações</h2>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-line">
               {assessments.map((item) => {
                 const status = item.imc ? imcStatus(item.imc) : '-'
-                const colorClass = item.imc ? imcStatusColor(status) : 'bg-gray-100 text-gray-500'
+                const colorClass = item.imc ? imcStatusColor(status) : 'bg-elev text-mute'
                 const isSelected = item.id === selectedAssessment?.id
                 return (
                   <button
                     key={item.id}
-                    className={`flex w-full items-center gap-3 p-4 text-left transition ${isSelected ? 'bg-purple-50' : 'hover:bg-gray-50'}`}
+                    className={`flex w-full items-center gap-3 p-4 text-left transition ${isSelected ? 'bg-accent-soft/60' : 'hover:bg-elev'}`}
                     onClick={() => setSelectedAssessment(item)}
                     type="button"
                   >
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-full ${isSelected ? 'bg-[#7c3aed] text-white' : 'bg-purple-50 text-[#7c3aed]'}`}>
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-full ${isSelected ? 'bg-accent-strong text-white' : 'bg-accent-soft text-accent'}`}>
                       <Calendar size={16} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-stone-950">{formatDate(item.dataAvaliacao)}</p>
-                      <p className="mt-0.5 text-xs text-stone-400">
+                      <p className="text-sm font-medium text-ink">{formatDate(item.dataAvaliacao)}</p>
+                      <p className="mt-0.5 text-xs text-faint">
                         IMC {item.imc?.toFixed(1) ?? '-'} · Gordura {item.percentualGordura ? `${item.percentualGordura.toFixed(1)}%` : '-'}
                       </p>
                     </div>
                     <span className={`rounded-full px-2.5 py-1 text-xs ${colorClass}`}>{status}</span>
-                    {isSelected && <span className="h-2 w-2 rounded-full bg-[#7c3aed]" />}
+                    {isSelected && <span className="h-2 w-2 rounded-full bg-accent-strong" />}
                   </button>
                 )
               })}

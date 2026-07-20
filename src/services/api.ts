@@ -1,6 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const REQUEST_TIMEOUT_MS = 30_000
 
+export const SESSION_EXPIRED_EVENT = 'up4life:session-expired'
+export const SESSION_EXPIRED_STORAGE_KEY = 'up4life.session_expired'
+
 interface RequestOptions extends RequestInit {
   data?: any
   skipAuthRedirect?: boolean
@@ -47,7 +50,8 @@ export const api = async (endpoint: string, options: RequestOptions = {}) => {
       if (!skipAuthRedirect && token) {
         localStorage.removeItem('up4life.auth.user')
         if (window.location.pathname !== '/login') {
-          window.location.href = '/login'
+          sessionStorage.setItem(SESSION_EXPIRED_STORAGE_KEY, '1')
+          window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
         }
         throw new Error(
           errorData.message || 'Sessao expirada. Faca login novamente.',

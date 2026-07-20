@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import type { WorkoutRecord } from '../../../@types/workout'
 import { getStudentWorkoutsService } from '../../../services/workouts'
 import { getStudentAssessmentsService, type AssessmentRecord } from '../../../services/assessments'
+import { formatPhone } from '../../../utils/formatPhone'
 
 interface StudentCard {
   goal: string
@@ -25,10 +26,10 @@ interface StudentCard {
 }
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string }> = {
-  Cardio:      { bg: 'bg-orange-50', text: 'text-orange-600' },
-  Funcional:   { bg: 'bg-blue-50',   text: 'text-blue-600' },
-  Mobilidade:  { bg: 'bg-emerald-50', text: 'text-emerald-600' },
-  Musculacao:  { bg: 'bg-purple-50', text: 'text-purple-600' },
+  Cardio:      { bg: 'bg-orange-500/12 light:bg-orange-50', text: 'text-orange-400 light:text-orange-600' },
+  Funcional:   { bg: 'bg-blue-500/12 light:bg-blue-50',   text: 'text-blue-400 light:text-blue-600' },
+  Mobilidade:  { bg: 'bg-emerald-500/12 light:bg-emerald-50', text: 'text-emerald-400 light:text-emerald-600' },
+  Musculacao:  { bg: 'bg-accent-soft', text: 'text-accent' },
 }
 
 interface Props {
@@ -36,22 +37,30 @@ interface Props {
   student: StudentCard
 }
 
-export const StudentDetailDrawer = ({ onClose, student }: Props) => {
+export const StudentProfileModal = ({ onClose, student }: Props) => {
   const navigate = useNavigate()
   const [workouts, setWorkouts] = useState<WorkoutRecord[]>([])
   const [isLoadingWorkouts, setIsLoadingWorkouts] = useState(true)
   const [latestAssessment, setLatestAssessment] = useState<AssessmentRecord | null>(null)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     setIsLoadingWorkouts(true)
+    setLoadError('')
     getStudentWorkoutsService(student.id)
       .then(setWorkouts)
-      .catch(() => setWorkouts([]))
+      .catch(() => {
+        setWorkouts([])
+        setLoadError('Não foi possível carregar os dados deste aluno agora.')
+      })
       .finally(() => setIsLoadingWorkouts(false))
 
     getStudentAssessmentsService(student.id)
       .then((records) => setLatestAssessment(records[0] ?? null))
-      .catch(() => setLatestAssessment(null))
+      .catch(() => {
+        setLatestAssessment(null)
+        setLoadError('Não foi possível carregar os dados deste aluno agora.')
+      })
   }, [student.id])
 
   const imc = latestAssessment?.imc != null
@@ -63,20 +72,16 @@ export const StudentDetailDrawer = ({ onClose, student }: Props) => {
     : '—'
 
   return (
-    <>
-      <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col overflow-y-auto bg-white shadow-2xl sm:max-w-md">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-5">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-y-auto rounded-[1.6rem] border border-line bg-surface shadow-2xl">
         {/* Top bar */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <p className="text-sm uppercase tracking-[0.2em] text-[#7c3aed]">
+        <div className="flex items-center justify-between border-b border-line px-5 py-4">
+          <p className="text-sm uppercase tracking-[0.2em] text-accent">
             Perfil do Aluno
           </p>
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-faint transition hover:bg-elev hover:text-ink"
             onClick={onClose}
             type="button"
           >
@@ -85,16 +90,21 @@ export const StudentDetailDrawer = ({ onClose, student }: Props) => {
         </div>
 
         <div className="flex-1 space-y-4 p-5">
+          {loadError ? (
+            <p className="text-sm text-rose-400 light:text-rose-600">
+              {loadError}
+            </p>
+          ) : null}
           {/* Profile header */}
-          <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="p-1">
             <div className="flex items-start gap-4">
               <div className="relative flex-shrink-0">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#a855f7] to-[#6d28d9] text-lg font-semibold text-white">
                   {student.initials}
                 </div>
                 <div
-                  className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white ${
-                    student.status === 'ativo' ? 'bg-emerald-500' : 'bg-gray-300'
+                  className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-surface ${
+                    student.status === 'ativo' ? 'bg-emerald-500' : 'bg-faint'
                   }`}
                 />
               </div>
@@ -102,16 +112,16 @@ export const StudentDetailDrawer = ({ onClose, student }: Props) => {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h2 className="font-display text-lg font-semibold text-stone-950">
+                    <h2 className="font-display text-lg font-semibold text-ink">
                       {student.name}
                     </h2>
-                    <p className="text-sm text-stone-400">Aluno · Cadastrado</p>
+                    <p className="text-sm text-faint">Aluno · Cadastrado</p>
                   </div>
                   <span
                     className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs ${
                       student.status === 'ativo'
-                        ? 'bg-emerald-50 text-emerald-600'
-                        : 'bg-gray-100 text-gray-500'
+                        ? 'bg-emerald-500/12 text-emerald-400 light:bg-emerald-50 light:text-emerald-600'
+                        : 'bg-elev text-mute'
                     }`}
                   >
                     {student.status}
@@ -119,11 +129,11 @@ export const StudentDetailDrawer = ({ onClose, student }: Props) => {
                 </div>
 
                 <div className="mt-2 flex flex-wrap gap-3">
-                  <div className="flex items-center gap-1.5 text-xs text-stone-500">
+                  <div className="flex items-center gap-1.5 text-xs text-mute">
                     <Phone size={12} />
-                    {student.telefone}
+                    {formatPhone(student.telefone)}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-stone-500">
+                  <div className="flex items-center gap-1.5 text-xs text-mute">
                     <Target size={12} />
                     {student.goal}
                   </div>
@@ -132,43 +142,41 @@ export const StudentDetailDrawer = ({ onClose, student }: Props) => {
             </div>
 
             {/* Stats */}
-            <div className="mt-4 grid grid-cols-2 gap-2 border-t border-gray-100 pt-4 sm:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-4 sm:grid-cols-4">
               {[
-                { bg: 'bg-purple-50', color: 'text-purple-600', label: 'Treinos', value: isLoadingWorkouts ? '…' : String(workouts.length) },
-                { bg: 'bg-orange-50', color: 'text-orange-500', label: 'Sequência', value: '—' },
-                { bg: 'bg-blue-50',   color: 'text-blue-600',   label: '% Gordura', value: gordura },
-                { bg: 'bg-emerald-50', color: 'text-emerald-600', label: 'IMC', value: imc },
+                { label: '% Gordura', value: gordura },
+                { label: 'IMC', value: imc },
               ].map((s) => (
-                <div key={s.label} className={`${s.bg} rounded-xl p-3`}>
-                  <p className={`text-base font-semibold ${s.color}`}>{s.value}</p>
-                  <p className="mt-0.5 text-xs text-stone-500">{s.label}</p>
+                <div key={s.label} className="rounded-xl bg-elev p-3">
+                  <p className="text-base font-semibold text-accent">{s.value}</p>
+                  <p className="mt-0.5 text-xs text-mute">{s.label}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Workouts list */}
-          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-100 p-4">
+          <div className="border-t border-line">
+            <div className="flex items-center justify-between border-b border-line p-4">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-50">
-                  <Dumbbell className="text-purple-600" size={16} />
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent-soft">
+                  <Dumbbell className="text-accent" size={16} />
                 </div>
-                <h3 className="font-display font-semibold text-stone-900">Treinos</h3>
+                <h3 className="font-display font-semibold text-ink">Treinos</h3>
               </div>
-              <span className="rounded-full bg-purple-50 px-2.5 py-0.5 text-xs font-medium text-purple-600">
+              <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">
                 {workouts.filter((w) => w.ativo).length} ativos
               </span>
             </div>
 
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-line">
               {isLoadingWorkouts ? (
                 <div className="flex justify-center p-6">
-                  <div className="h-6 w-6 animate-spin rounded-full border-4 border-[#7c3aed] border-t-transparent" />
+                  <div className="h-6 w-6 animate-spin rounded-full border-4 border-accent border-t-transparent" />
                 </div>
               ) : workouts.length > 0 ? (
                 workouts.map((w) => {
-                  const style = CATEGORY_STYLES[w.categoria] ?? { bg: 'bg-gray-50', text: 'text-gray-500' }
+                  const style = CATEGORY_STYLES[w.categoria] ?? { bg: 'bg-elev', text: 'text-mute' }
                   return (
                     <div
                       key={w.id}
@@ -178,15 +186,15 @@ export const StudentDetailDrawer = ({ onClose, student }: Props) => {
                         <Dumbbell className={style.text} size={15} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-stone-900">{w.nome}</p>
-                        <p className="mt-0.5 text-xs text-stone-400">
+                        <p className="truncate text-sm font-medium text-ink">{w.nome}</p>
+                        <p className="mt-0.5 text-xs text-faint">
                           {w.exercicios.length} exercícios · {w.duracao_estimada}
                         </p>
                       </div>
                       <div className="flex flex-shrink-0 flex-col items-end gap-1">
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs ${
-                            w.ativo ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'
+                            w.ativo ? 'bg-emerald-500/12 text-emerald-400 light:bg-emerald-50 light:text-emerald-600' : 'bg-elev text-mute'
                           }`}
                         >
                           {w.ativo ? 'Ativo' : 'Inativo'}
@@ -199,33 +207,33 @@ export const StudentDetailDrawer = ({ onClose, student }: Props) => {
                   )
                 })
               ) : (
-                <p className="p-4 text-xs text-stone-400">Nenhum treino cadastrado.</p>
+                <p className="p-4 text-xs text-faint">Nenhum treino cadastrado.</p>
               )}
             </div>
           </div>
 
           {/* Avaliações */}
           <button
-            className="group flex w-full items-center gap-4 rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition-all hover:border-blue-200 hover:shadow-md"
+            className="group flex w-full items-center gap-4 rounded-2xl border border-line p-4 text-left transition-all hover:bg-elev"
             onClick={() => {
               navigate(`/dashboard/admin/avaliacoes?aluno=${student.id}`)
               onClose()
             }}
             type="button"
           >
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-50 transition-colors group-hover:bg-blue-100">
-              <ClipboardList className="text-blue-600" size={18} />
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-accent-soft transition-colors">
+              <ClipboardList className="text-accent" size={18} />
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-medium text-stone-900">Avaliações</h3>
-              <p className="mt-0.5 text-xs text-stone-400">
+              <h3 className="text-sm font-medium text-ink">Avaliações</h3>
+              <p className="mt-0.5 text-xs text-faint">
                 Ver avaliações de {student.name.split(' ')[0]}
               </p>
             </div>
-            <ChevronRight className="flex-shrink-0 text-gray-300 transition-colors group-hover:text-blue-400" size={18} />
+            <ChevronRight className="flex-shrink-0 text-faint transition-colors group-hover:text-accent" size={18} />
           </button>
         </div>
-      </aside>
-    </>
+      </div>
+    </div>
   )
 }

@@ -1,24 +1,84 @@
-import { Calendar, Phone, Save, Shield, Target, User } from 'lucide-react'
-import { useState } from 'react'
+import { Bell, Calendar, Camera, KeyRound, Pencil, Phone, Target, User, UserPen } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DashboardShell } from '../components/layout/DashboardShell'
+import { ChangePasswordModal } from '../components/modules/admin/ChangePasswordModal'
+import { EditPersonalDataModal } from '../components/modules/admin/EditPersonalDataModal'
+import { PageHeader } from '../components/ui/PageHeader'
 import { useAuth } from '../hooks/useAuth'
+import { usePushNotifications } from '../hooks/usePushNotifications'
 import { getDashboardNavItems } from '../utils/dashboardNav'
+import { getStudentSelfService, updateStudentSelfService } from '../services/students'
+import { getStudentWorkoutsService } from '../services/workouts'
+import { getStudentAssessmentsService } from '../services/assessments'
+import { formatPhone } from '../utils/formatPhone'
 
 export const StudentProfilePage = () => {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(user?.name ?? '')
-  const [phone, setPhone] = useState(user?.phone ?? '')
-  const [birthdate, setBirthdate] = useState('1999-05-14')
-  const [bio, setBio] = useState(
-    'Aluno focado em consistencia, evolucao corporal e qualidade de vida no longo prazo.',
-  )
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [activeModal, setActiveModal] = useState<'data' | 'password' | null>(null)
+  const [birthdate, setBirthdate] = useState('')
+  const [bio, setBio] = useState('')
+  const [counts, setCounts] = useState({ treinos: 0, avaliacoes: 0 })
+  const menuRef = useRef<HTMLDivElement>(null)
+  const push = usePushNotifications()
+
+  useEffect(() => {
+    getStudentSelfService()
+      .then((self) => {
+        setBirthdate(self.nascimento ? self.nascimento.slice(0, 10) : '')
+        setBio(self.historicoSaude ?? '')
+      })
+      .catch(() => {
+        setBirthdate('')
+        setBio('')
+      })
+  }, [])
+
+  useEffect(() => {
+    if (!user?.id) return
+    Promise.all([getStudentWorkoutsService(user.id), getStudentAssessmentsService(user.id)])
+      .then(([workouts, assessments]) => {
+        setCounts({ treinos: workouts.length, avaliacoes: assessments.length })
+      })
+      .catch(() => setCounts({ treinos: 0, avaliacoes: 0 }))
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return
+    }
+
+    const handleMouseDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleMouseDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [menuOpen])
 
   const birthdateBR = birthdate
     ? birthdate.split('-').reverse().join('/')
-    : ''
+    : 'Não informado'
+
+  const openModal = (modal: 'data' | 'password') => {
+    setMenuOpen(false)
+    setActiveModal(modal)
+  }
 
   return (
     <DashboardShell
@@ -30,124 +90,99 @@ export const StudentProfilePage = () => {
         navigate('/login')
       }}
       overviewItems={[
-        { label: 'Treinos', value: '24' },
-        { label: 'Sequencia', value: '7d' },
-        { label: 'Aval.', value: '4' },
+        { label: 'Treinos', value: String(counts.treinos) },
+        { label: 'Aval.', value: String(counts.avaliacoes) },
       ]}
       roleLabel="Aluno"
-      subtitle="Area pessoal para acompanhar identidade, rotina e configuracoes basicas."
       tone="student"
     >
       <div className="mx-auto max-w-4xl space-y-4">
-        <section className="flex items-center justify-between rounded-[2rem] border border-[#e5e7eb] bg-white p-5 shadow-[0_16px_48px_rgba(15,23,42,0.08)]">
-          <div>
-            <h1 className="font-display text-3xl font-semibold text-stone-950">Meu Perfil</h1>
-            <p className="mt-1 text-sm text-stone-500">Visualize e atualize seus dados pessoais.</p>
-          </div>
-          <button
-            className={`rounded-xl px-4 py-2.5 text-sm font-medium transition ${
-              editing ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-stone-950 text-white hover:bg-stone-800'
-            }`}
-            onClick={() => setEditing(!editing)}
-            type="button"
-          >
-            {editing ? 'Cancelar' : 'Editar'}
-          </button>
-        </section>
+        <PageHeader
+          description=""
+          eyebrow="Perfil"
+          title=""
+        />
 
-        <section className="rounded-[2rem] border border-[#e5e7eb] bg-white p-5 shadow-[0_16px_48px_rgba(15,23,42,0.08)]">
-          <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#3b82f6] to-[#2563eb] text-2xl text-white">
-              {user?.name?.charAt(0)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-lg font-semibold text-stone-950">{user?.name}</h2>
-              <p className="truncate text-sm text-stone-500">{user?.phone}</p>
-              <span className="mt-2 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-600">
-                Aluno
-              </span>
-            </div>
-          </div>
-        </section>
+        <div className=" divide-y divide-line rounded-[2rem]">
+          <section className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="relative" ref={menuRef}>
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-[#3b82f6] to-[#2563eb] text-2xl text-white">
+                  {user?.name?.charAt(0)}
+                </div>
+                <button
+                  aria-expanded={menuOpen}
+                  aria-haspopup="menu"
+                  aria-label="Editar perfil"
+                  className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-accent-strong text-white shadow-lg transition hover:brightness-110"
+                  onClick={() => setMenuOpen((open) => !open)}
+                  type="button"
+                >
+                  <Pencil size={13} />
+                </button>
 
-        <section className="rounded-[2rem] border border-[#e5e7eb] bg-white p-5 shadow-[0_16px_48px_rgba(15,23,42,0.08)]">
-          <h3 className="mb-4 font-display text-2xl font-semibold text-stone-950">Dados Pessoais</h3>
-          <div className="space-y-3">
-            <label className="block text-sm text-stone-600">
-              <span className="mb-1.5 flex items-center gap-2"><User size={13} />Nome completo</span>
-              <input
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm outline-none focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10"
-                disabled={!editing}
-                onChange={(event) => setName(event.target.value)}
-                value={name}
-              />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm text-stone-600">
-                <span className="mb-1.5 flex items-center gap-2"><Phone size={13} />Telefone</span>
-                <input
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm outline-none focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10"
-                  disabled={!editing}
-                  onChange={(event) => setPhone(event.target.value)}
-                  value={phone}
-                />
-              </label>
-              <label className="block text-sm text-stone-600">
-                <span className="mb-1.5 flex items-center gap-2"><Calendar size={13} />Data de nascimento</span>
-                {editing ? (
-                  <input
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm outline-none focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10"
-                    onChange={(e) => setBirthdate(e.target.value)}
-                    type="date"
-                    value={birthdate}
-                  />
-                ) : (
-                  <div className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm text-stone-900">
-                    {birthdateBR}
+                {menuOpen ? (
+                  <div
+                    className="absolute left-0 top-full z-30 mt-2 w-60 overflow-hidden rounded-2xl border border-line bg-surface shadow-xl"
+                    role="menu"
+                  >
+                    <button
+                      className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm text-ink transition hover:bg-elev"
+                      onClick={() => openModal('data')}
+                      role="menuitem"
+                      type="button"
+                    >
+                      <UserPen className="text-mute" size={15} />
+                      Dados pessoais
+                    </button>
+                    <button
+                      className="flex w-full cursor-not-allowed items-center gap-2.5 px-4 py-3 text-left text-sm text-ink opacity-50"
+                      disabled
+                      role="menuitem"
+                      type="button"
+                    >
+                      <Camera className="text-mute" size={15} />
+                      Alterar foto de perfil
+                      <span className="ml-auto whitespace-nowrap rounded-full bg-elev px-2 py-0.5 text-[10px] uppercase tracking-wide text-faint">
+                        Em breve
+                      </span>
+                    </button>
+                    <button
+                      className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm text-ink transition hover:bg-elev"
+                      onClick={() => openModal('password')}
+                      role="menuitem"
+                      type="button"
+                    >
+                      <KeyRound className="text-mute" size={15} />
+                      Alterar senha
+                    </button>
                   </div>
-                )}
-              </label>
+                ) : null}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-lg font-semibold text-ink">{user?.name}</h2>
+                <p className="truncate text-sm text-mute">{formatPhone(user?.phone ?? '')}</p>
+                <span className="mt-2 inline-block rounded-full bg-blue-500/12 px-3 py-1 text-xs text-blue-400 light:bg-blue-50 light:text-blue-600">
+                  Aluno
+                </span>
+              </div>
             </div>
-            <label className="block text-sm text-stone-600">
-              <span className="mb-1.5 flex items-center gap-2"><Target size={13} />Objetivo / Bio</span>
-              <textarea
-                className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm outline-none focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10"
-                disabled={!editing}
-                onChange={(event) => setBio(event.target.value)}
-                rows={3}
-                value={bio}
-              />
-            </label>
-          </div>
-        </section>
-
-        <section className="rounded-[2rem] border border-[#e5e7eb] bg-white p-5 shadow-[0_16px_48px_rgba(15,23,42,0.08)]">
-          <h3 className="mb-4 flex items-center gap-2 font-display text-2xl font-semibold text-stone-950">
-            <Shield className="text-blue-600" size={18} />
-            Segurança
-          </h3>
-          <div className="space-y-3">
-            {['Senha atual', 'Nova senha', 'Confirmar nova senha'].map((label) => (
-              <label key={label} className="block text-sm text-stone-600">
-                <span className="mb-1.5 block">{label}</span>
-                <input
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm outline-none focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10"
-                  disabled={!editing}
-                  placeholder="••••••••"
-                  type="password"
-                />
-              </label>
-            ))}
-          </div>
-        </section>
-
-        {editing ? (
-          <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-stone-950 py-4 text-sm font-medium text-white" type="button">
-            <Save size={16} />
-            Salvar alteracoes
-          </button>
-        ) : null}
+          </section>
+        </div>
       </div>
+
+      {activeModal === 'data' ? (
+        <EditPersonalDataModal
+          onClose={() => setActiveModal(null)}
+          updateSelf={updateStudentSelfService}
+        />
+      ) : null}
+      {activeModal === 'password' ? (
+        <ChangePasswordModal
+          onClose={() => setActiveModal(null)}
+          updateSelf={updateStudentSelfService}
+        />
+      ) : null}
     </DashboardShell>
   )
 }

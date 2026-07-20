@@ -24,19 +24,19 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback ?? (
-          <div className="flex min-h-screen items-center justify-center bg-[#f6f7fb] p-6">
-            <div className="w-full max-w-md rounded-[2rem] border border-rose-200 bg-white p-8 shadow-[0_16px_48px_rgba(15,23,42,0.08)]">
-              <p className="text-sm font-medium uppercase tracking-[0.24em] text-rose-500">
+          <div className="flex min-h-screen items-center justify-center bg-canvas p-6">
+            <div className="w-full max-w-md text-center">
+              <p className="text-sm font-medium uppercase tracking-[0.24em] text-rose-400 light:text-rose-500">
                 Erro
               </p>
-              <h1 className="font-display mt-3 text-2xl font-semibold text-stone-950">
+              <h1 className="font-display mt-3 text-2xl font-semibold text-ink">
                 Algo deu errado
               </h1>
-              <p className="mt-2 text-sm leading-6 text-stone-500">
+              <p className="mt-2 text-sm leading-6 text-mute">
                 Nao foi possivel carregar esta pagina. Tente recarregar ou entre em contato com o suporte.
               </p>
               <button
-                className="mt-6 w-full rounded-xl bg-stone-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-stone-800"
+                className="btn-primary mt-6 w-full rounded-xl"
                 onClick={() => window.location.reload()}
                 type="button"
               >

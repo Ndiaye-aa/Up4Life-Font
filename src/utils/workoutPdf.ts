@@ -1,17 +1,33 @@
 import type { WorkoutRecord } from '../@types/workout'
 
+const escapeHtml = (value: unknown): string =>
+  String(value ?? '').replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case '&':
+        return '&amp;'
+      case '<':
+        return '&lt;'
+      case '>':
+        return '&gt;'
+      case '"':
+        return '&quot;'
+      default:
+        return '&#39;'
+    }
+  })
+
 export const exportWorkoutPdf = (workout: WorkoutRecord): void => {
   const rows = workout.exercicios
     .map(
       (ex, i) => `
         <tr>
           <td class="num">${i + 1}</td>
-          <td>${ex.nome}</td>
-          <td>${ex.musculo}</td>
-          <td class="center">${ex.series}</td>
-          <td class="center">${ex.repeticoes}</td>
-          <td class="center">${ex.carga || '—'}</td>
-          <td class="center">${ex.descanso}s</td>
+          <td>${escapeHtml(ex.nome)}</td>
+          <td>${escapeHtml(ex.musculo)}</td>
+          <td class="center">${escapeHtml(ex.series)}</td>
+          <td class="center">${escapeHtml(ex.repeticoes)}</td>
+          <td class="center">${escapeHtml(ex.carga) || '—'}</td>
+          <td class="center">${escapeHtml(ex.descanso)}s</td>
         </tr>`,
     )
     .join('')
@@ -22,7 +38,7 @@ export const exportWorkoutPdf = (workout: WorkoutRecord): void => {
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>${workout.nome} — Up4Life</title>
+  <title>${escapeHtml(workout.nome)} — Up4Life</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, sans-serif; padding: 48px; color: #1c1917; background: #fff; }
@@ -41,6 +57,9 @@ export const exportWorkoutPdf = (workout: WorkoutRecord): void => {
     td.num { color: #a8a29e; font-size: 12px; font-weight: 600; }
     td.empty { text-align: center; color: #a8a29e; padding: 32px; }
     tbody tr:last-child td { border-bottom: none; }
+    .obs { margin-top: 28px; padding: 16px 18px; border-radius: 10px; background: #f5f3ff; border: 1px solid #ede9fe; }
+    .obs-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #7c3aed; font-weight: 700; }
+    .obs-text { margin-top: 6px; font-size: 13px; line-height: 1.6; color: #1c1917; white-space: pre-wrap; }
     footer { margin-top: 48px; font-size: 11px; color: #a8a29e; display: flex; justify-content: space-between; }
     @media print {
       body { padding: 0; }
@@ -51,19 +70,19 @@ export const exportWorkoutPdf = (workout: WorkoutRecord): void => {
 <body>
   <header>
     <p class="brand">Up4Life</p>
-    <h1>${workout.nome}</h1>
+    <h1>${escapeHtml(workout.nome)}</h1>
     <div class="meta">
       <div class="meta-item">
         <span class="meta-label">Aluno</span>
-        <span class="meta-value">${workout.nome_aluno}</span>
+        <span class="meta-value">${escapeHtml(workout.nome_aluno)}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Categoria</span>
-        <span class="meta-value">${workout.categoria}</span>
+        <span class="meta-value">${escapeHtml(workout.categoria)}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Duração estimada</span>
-        <span class="meta-value">${workout.duracao_estimada}</span>
+        <span class="meta-value">${escapeHtml(workout.duracao_estimada)}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Criado em</span>
@@ -88,6 +107,11 @@ export const exportWorkoutPdf = (workout: WorkoutRecord): void => {
       ${rows || empty}
     </tbody>
   </table>
+
+  ${workout.observacoes ? `<div class="obs">
+    <p class="obs-label">Obs</p>
+    <p class="obs-text">${escapeHtml(workout.observacoes)}</p>
+  </div>` : ''}
 
   <footer>
     <span>Up4Life — Planilha de Treino</span>

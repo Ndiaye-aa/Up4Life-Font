@@ -2,7 +2,8 @@ import { api } from './api'
 
 export interface AssessmentRecord {
   id: number
-  alunoId: number
+  /** null quando a avaliação pertence ao próprio personal */
+  alunoId: number | null
   peso: number
   altura: number
   idade: number
@@ -15,6 +16,12 @@ export interface AssessmentRecord {
   abdominal?: number
   supraIliaca?: number
   coxa?: number
+  perimetroTorax?: number
+  perimetroAbdomen?: number
+  perimetroCoxa?: number
+  perimetroPanturrilha?: number
+  perimetroBraco?: number
+  perimetroAntebraco?: number
   imc?: number
   iac?: number
   percentualGordura?: number
@@ -22,7 +29,10 @@ export interface AssessmentRecord {
 }
 
 export interface CreateAssessmentPayload {
-  alunoId: number
+  alunoId?: number
+  /** vincula a avaliação ao próprio personal autenticado (exige sexo) */
+  paraMim?: boolean
+  sexo?: 'M' | 'F'
   peso: number
   altura: number
   idade: number
@@ -35,6 +45,12 @@ export interface CreateAssessmentPayload {
   abdominal?: number
   supraIliaca?: number
   coxa?: number
+  perimetroTorax?: number
+  perimetroAbdomen?: number
+  perimetroCoxa?: number
+  perimetroPanturrilha?: number
+  perimetroBraco?: number
+  perimetroAntebraco?: number
 }
 
 export const createAssessmentService = async (
@@ -56,7 +72,7 @@ function normalizeAssessment(raw: Record<string, unknown>): AssessmentRecord {
   return {
     ...raw,
     id: Number(raw.id),
-    alunoId: Number(raw.alunoId),
+    alunoId: raw.alunoId == null ? null : Number(raw.alunoId),
     peso: Number(raw.peso),
     altura: Number(raw.altura),
     idade: Number(raw.idade),
@@ -84,5 +100,7 @@ export const getStudentAssessmentsService = async (
 }
 
 export const getAllAssessmentsService = async (): Promise<AssessmentRecord[]> => {
-  return api('/avaliacoes')
+  const result = await api('/avaliacoes')
+  if (!Array.isArray(result)) return []
+  return result.map((r: Record<string, unknown>) => normalizeAssessment(r))
 }

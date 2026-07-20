@@ -1,6 +1,7 @@
 export type StudentSex = 'M' | 'F'
 
 export interface StudentRecord {
+  ativo: boolean
   criadoEm: string
   historicoSaude: string | null
   id: number

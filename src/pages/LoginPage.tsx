@@ -1,13 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import type { UserRole } from '../@types/auth'
 import { AuthSplitLayout } from '../components/layout/AuthSplitLayout'
 import { RoleSegmentedControl } from '../components/ui/RoleSegmentedControl'
 import { TextField } from '../components/ui/TextField'
 import { useAuth } from '../hooks/useAuth'
+import { SESSION_EXPIRED_STORAGE_KEY } from '../services/api'
 
 const loginSchema = z.object({
   phone: z
@@ -43,8 +44,25 @@ const formatPhone = (value: string) => {
 
 export const LoginPage = () => {
   const navigate = useNavigate()
-  const { isLoading, login } = useAuth()
+  const { isAuthenticated, isLoading, login, user } = useAuth()
   const [submitError, setSubmitError] = useState('')
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState('')
+
+  useEffect(() => {
+    if (sessionStorage.getItem(SESSION_EXPIRED_STORAGE_KEY)) {
+      sessionStorage.removeItem(SESSION_EXPIRED_STORAGE_KEY)
+      setSessionExpiredMessage('Sua sessão expirou. Faça login novamente.')
+    }
+  }, [])
+
+  if (isAuthenticated && user?.accessToken) {
+    return (
+      <Navigate
+        replace
+        to={user.role === 'PERSONAL' ? '/dashboard/admin' : '/dashboard/aluno'}
+      />
+    )
+  }
 
   const {
     control,
@@ -101,16 +119,22 @@ export const LoginPage = () => {
     <AuthSplitLayout>
       <div className="space-y-6">
         <div className="space-y-2">
-          <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#7c3aed]">
+          <p className="text-sm font-medium uppercase tracking-[0.24em] text-accent">
             Login
           </p>
-          <h2 className="font-display text-3xl font-semibold text-stone-950">
+          <h2 className="font-display text-3xl font-semibold text-ink">
             Bem-vindo de volta
           </h2>
-          <p className="text-sm leading-6 text-stone-500">
+          <p className="text-sm leading-6 text-mute">
             Entre com seu perfil para acompanhar seus treinos e avaliações.
           </p>
         </div>
+
+        {sessionExpiredMessage ? (
+          <p className="text-sm text-amber-400 light:text-amber-600">
+            {sessionExpiredMessage}
+          </p>
+        ) : null}
 
         <RoleSegmentedControl onChange={handleRoleChange} value={role} />
 
@@ -149,27 +173,22 @@ export const LoginPage = () => {
           />
 
           {submitError ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <p className="text-sm text-rose-400 light:text-rose-600">
               {submitError}
-            </div>
+            </p>
           ) : null}
 
           <button
-            className="w-full rounded-2xl bg-stone-950 px-4 py-3.5 text-sm font-medium text-white transition hover:bg-stone-800 focus:outline-none focus:ring-4 focus:ring-[#7c3aed]/25 disabled:cursor-not-allowed disabled:opacity-65"
+            className="btn-primary w-full py-3.5 focus:outline-none focus:ring-4 focus:ring-accent/25"
             disabled={isLoading}
             type="submit"
           >
             {isLoading ? 'Entrando...' : 'Entrar na plataforma'}
           </button>
 
-          <div className="rounded-2xl border border-[#e9d5ff] bg-[#faf5ff] px-4 py-3">
-            <p className="text-xs font-medium text-[#7c3aed]">
-              Acesso de demonstração
-            </p>
-            <p className="mt-1 text-xs leading-5 text-[#6d28d9]">
-              Quaisquer erros encontrados notificar desenvolvedor para correções.
-            </p>
-          </div>
+          <p className="text-center text-xs leading-5 text-faint">
+            Acesso de demonstração · quaisquer erros encontrados, notificar o desenvolvedor.
+          </p>
         </form>
       </div>
     </AuthSplitLayout>
