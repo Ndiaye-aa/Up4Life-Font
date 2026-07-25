@@ -1,9 +1,14 @@
-// Em produção, sem VITE_API_URL definida, usa /api (same-origin) — a Vercel
-// faz proxy reverso de /api/* para o backend real (ver vercel.json), o que
-// mantém os cookies de auth/CSRF como first-party para o navegador e evita
-// que sejam bloqueados por ITP do Safari/Chrome mobile e in-app browsers.
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000')
+// Em produção sempre usamos /api (same-origin) — a Vercel faz proxy reverso
+// de /api/* para o backend real (ver vercel.json). Isso mantém os cookies de
+// auth/CSRF como first-party para o navegador, o que é exigido pelo
+// SameSite=Lax dos cookies (ver auth.service.ts no backend): se VITE_API_URL
+// apontasse direto para o domínio do backend, a chamada voltaria a ser
+// cross-site e o navegador passaria a descartar o cookie, derrubando a
+// sessão logo após o login. Em dev, VITE_API_URL continua livre para apontar
+// pro backend local.
+const API_BASE_URL = import.meta.env.PROD
+  ? '/api'
+  : import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const REQUEST_TIMEOUT_MS = 30_000
 
 export const SESSION_EXPIRED_EVENT = 'up4life:session-expired'
