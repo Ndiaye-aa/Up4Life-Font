@@ -1,17 +1,10 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+// Em produção, sem VITE_API_URL definida, usa /api (same-origin) — a Vercel
+// faz proxy reverso de /api/* para o backend real (ver vercel.json), o que
+// mantém os cookies de auth/CSRF como first-party para o navegador e evita
+// que sejam bloqueados por ITP do Safari/Chrome mobile e in-app browsers.
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000')
 const REQUEST_TIMEOUT_MS = 30_000
-
-if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
-  // VITE_API_URL é embutido no bundle em build time; se faltar no ambiente
-  // de build (ex: variável não configurada na Vercel), a build de produção
-  // cai silenciosamente em localhost:3000 e nada funciona. Avisa alto no
-  // console em vez de falhar silenciosamente com erros de CORS confusos.
-  // eslint-disable-next-line no-console
-  console.error(
-    '[up4life] VITE_API_URL não foi definida no build de produção. ' +
-      'A API está apontando para localhost:3000, o que não vai funcionar.',
-  )
-}
 
 export const SESSION_EXPIRED_EVENT = 'up4life:session-expired'
 export const SESSION_EXPIRED_STORAGE_KEY = 'up4life.session_expired'
