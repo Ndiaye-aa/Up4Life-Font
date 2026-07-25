@@ -13,8 +13,10 @@ const DAYS: { value: DiaSemana; abbr: string; letter: string; full: string }[] =
 ]
 
 interface Props {
+  errorMessage?: string
   initialDias: DiaSemana[]
   initialHorarios?: Partial<Record<DiaSemana, string>>
+  isSaving?: boolean
   onClose: () => void
   onSave: (dias: DiaSemana[], horarios: Partial<Record<DiaSemana, string>>) => void
   studentInitials: string
@@ -22,8 +24,10 @@ interface Props {
 }
 
 export const EditScheduleModal = ({
+  errorMessage,
   initialDias,
   initialHorarios,
+  isSaving,
   onClose,
   onSave,
   studentInitials,
@@ -146,9 +150,16 @@ export const EditScheduleModal = ({
             </div>
           ) : null}
 
+          {errorMessage ? (
+            <p className="mt-3 rounded-xl bg-rose-500/10 px-3 py-2 text-xs text-rose-400 light:text-rose-600">
+              {errorMessage}
+            </p>
+          ) : null}
+
           <div className="mt-5 flex gap-3">
             <button
               className="flex-1 rounded-2xl border border-line px-4 py-2.5 text-sm font-medium text-mute transition hover:bg-elev"
+              disabled={isSaving}
               onClick={onClose}
               type="button"
             >
@@ -156,11 +167,11 @@ export const EditScheduleModal = ({
             </button>
             <button
               className="btn-primary flex-1"
-              disabled={dias.length === 0}
+              disabled={dias.length === 0 || isSaving}
               onClick={() => onSave(dias, horarios)}
               type="button"
             >
-              Salvar
+              {isSaving ? 'Salvando...' : 'Salvar'}
             </button>
           </div>
         </div>

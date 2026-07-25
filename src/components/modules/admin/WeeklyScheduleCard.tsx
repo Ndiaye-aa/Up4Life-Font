@@ -84,6 +84,8 @@ export const WeeklyScheduleCard = ({ personalId, students }: Props) => {
   const [schedules, setSchedules] = useState<StudentSchedule[]>([])
   const [editingStudent, setEditingStudent] = useState<StudentCard | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const { endDrag, guardClick, onPointerDown, onPointerMove, scrollRef } = useDragScroll()
 
   useEffect(() => {
@@ -144,18 +146,32 @@ export const WeeklyScheduleCard = ({ personalId, students }: Props) => {
 
   const handleSave = async (dias: DiaSemana[], horarios: Partial<Record<DiaSemana, string>>) => {
     if (!editingStudent) return
-    const updated = await saveStudentScheduleService(personalId, {
-      alunoId: editingStudent.id,
-      dias,
-      horarios,
-    })
-    setSchedules(updated)
-    setEditingStudent(null)
+    setIsSaving(true)
+    setSaveError('')
+    try {
+      const updated = await saveStudentScheduleService(personalId, {
+        alunoId: editingStudent.id,
+        dias,
+        horarios,
+      })
+      setSchedules(updated)
+      setEditingStudent(null)
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : 'Não foi possível salvar a agenda agora.',
+      )
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleRemove = async (studentId: number) => {
-    const updated = await removeStudentScheduleService(personalId, studentId)
-    setSchedules(updated)
+    try {
+      const updated = await removeStudentScheduleService(personalId, studentId)
+      setSchedules(updated)
+    } catch {
+      setSaveError('Não foi possível remover a agenda agora.')
+    }
   }
 
   return (
@@ -405,9 +421,14 @@ export const WeeklyScheduleCard = ({ personalId, students }: Props) => {
 
       {editingStudent ? (
         <EditScheduleModal
+          errorMessage={saveError}
           initialDias={daysByStudent.get(editingStudent.id) ?? []}
           initialHorarios={horariosByStudent.get(editingStudent.id) ?? {}}
-          onClose={() => setEditingStudent(null)}
+          isSaving={isSaving}
+          onClose={() => {
+            setSaveError('')
+            setEditingStudent(null)
+          }}
           onSave={handleSave}
           studentInitials={editingStudent.initials}
           studentName={editingStudent.name}
