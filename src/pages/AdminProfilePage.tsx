@@ -247,7 +247,7 @@ export const AdminProfilePage = () => {
                     <button
                       aria-label="Exportar PDF"
                       className="rounded-xl p-2 text-faint transition hover:bg-elev hover:text-ink"
-                      onClick={() => exportWorkoutPdf(workout)}
+                      onClick={() => exportWorkoutPdf(workout, user?.name)}
                       title="Exportar PDF"
                       type="button"
                     >

@@ -16,7 +16,7 @@ const escapeHtml = (value: unknown): string =>
     }
   })
 
-export const exportWorkoutPdf = (workout: WorkoutRecord): void => {
+export const exportWorkoutPdf = (workout: WorkoutRecord, personalName?: string): void => {
   const rows = workout.exercicios
     .map(
       (ex, i) => `
@@ -75,6 +75,10 @@ export const exportWorkoutPdf = (workout: WorkoutRecord): void => {
       <div class="meta-item">
         <span class="meta-label">Aluno</span>
         <span class="meta-value">${escapeHtml(workout.nome_aluno)}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Personal</span>
+        <span class="meta-value">${escapeHtml(personalName ?? '—')}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Categoria</span>

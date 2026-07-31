@@ -309,7 +309,7 @@ export const AdminWorkoutsPage = () => {
                   </button>
                   <button
                     className="flex items-center justify-center gap-1.5 rounded-xl border border-line px-3 py-2.5 text-xs text-mute transition hover:bg-elev"
-                    onClick={() => exportWorkoutPdf(workout)}
+                    onClick={() => exportWorkoutPdf(workout, user?.name)}
                     title="Exportar planilha em PDF"
                     type="button"
                   >
