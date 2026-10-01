@@ -27,7 +27,8 @@ export const getWeeklyScheduleService = async (
   let schedules: StudentSchedule[]
   try {
     schedules = normalize(await api('/agenda'))
-  } catch {
+  } catch (err) {
+    console.error('Falha ao buscar agenda do servidor, usando cache local:', err)
     return readLegacy(personalId)
   }
 

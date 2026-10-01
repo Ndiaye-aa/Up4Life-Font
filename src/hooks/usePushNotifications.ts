@@ -19,6 +19,7 @@ export function usePushNotifications() {
   )
   const [subscribed, setSubscribed] = useState(false)
   const [accountSubscribed, setAccountSubscribed] = useState(false)
+  const [accountCheckFailed, setAccountCheckFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [ready, setReady] = useState(!isSupported)
   const [error, setError] = useState<string | null>(null)
@@ -32,12 +33,18 @@ export function usePushNotifications() {
       .then((subscription) => Boolean(subscription))
       .catch(() => false)
 
-    const accountCheck = getPushStatusService().catch(() => false)
+    let accountFailed = false
+    const accountCheck = getPushStatusService().catch((err: unknown) => {
+      console.error('Falha ao verificar status de push da conta:', err)
+      accountFailed = true
+      return false
+    })
 
     Promise.all([browserCheck, accountCheck])
       .then(([browser, account]) => {
         setSubscribed(browser)
         setAccountSubscribed(account)
+        setAccountCheckFailed(accountFailed)
       })
       .finally(() => setReady(true))
   }, [])
@@ -122,6 +129,7 @@ export function usePushNotifications() {
     permission,
     subscribed,
     accountSubscribed,
+    accountCheckFailed,
     busy,
     ready,
     error,

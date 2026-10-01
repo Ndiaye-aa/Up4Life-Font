@@ -1,14 +1,16 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { AlertCircle, ArrowLeft, ChevronDown, ChevronUp, Save, Loader2 } from 'lucide-react'
 import { DashboardShell } from '../components/layout/DashboardShell'
 import { useAuth } from '../hooks/useAuth'
 import { getDashboardNavItems } from '../utils/dashboardNav'
-import { getStudentsService } from '../services/students'
-import { createAssessmentService, getAllAssessmentsService, type AssessmentRecord } from '../services/assessments'
+import { createAssessmentService } from '../services/assessments'
+import { useStudents } from '../hooks/useStudents'
+import { useAssessments, invalidateAssessments } from '../hooks/useAssessments'
 import type { StudentRecord } from '../@types/student'
 import { formatDateBR, todayBR } from '../utils/formatDate'
+import { STATUS_COLORS, calcMassaMagra, getBodyFatStatus, getImcStatus } from '../utils/bodyMetrics'
 
 const SECTIONS = (students: StudentRecord[], personalName?: string) => [
   {
@@ -36,14 +38,14 @@ const SECTIONS = (students: StudentRecord[], personalName?: string) => [
     id: 'perimetros',
     title: 'Perímetros (cm)',
     fields: [
-      { id: 'torax', label: 'Tórax', type: 'number', placeholder: '0', colSpan: '' },
-      { id: 'cintura', label: 'Cintura', type: 'number', placeholder: '0', colSpan: '' },
-      { id: 'abdomen', label: 'Abdômen', type: 'number', placeholder: '0', colSpan: '' },
-      { id: 'quadril', label: 'Quadril', type: 'number', placeholder: '0', colSpan: '' },
-      { id: 'thigh', label: 'Coxa (D/E)', type: 'number', placeholder: '0', colSpan: '' },
-      { id: 'calf', label: 'Panturrilha', type: 'number', placeholder: '0', colSpan: '' },
-      { id: 'arm', label: 'Braço contraído', type: 'number', placeholder: '0', colSpan: '' },
-      { id: 'forearm', label: 'Antebraço', type: 'number', placeholder: '0', colSpan: '' },
+      { id: 'torax', label: 'Tórax', type: 'number', placeholder: '0', colSpan: '', required: false },
+      { id: 'cintura', label: 'Cintura', type: 'number', placeholder: '0', colSpan: '', required: false },
+      { id: 'abdomen', label: 'Abdômen', type: 'number', placeholder: '0', colSpan: '', required: false },
+      { id: 'quadril', label: 'Quadril', type: 'number', placeholder: '0', colSpan: '', required: false },
+      { id: 'thigh', label: 'Coxa (D/E)', type: 'number', placeholder: '0', colSpan: '', required: false },
+      { id: 'calf', label: 'Panturrilha', type: 'number', placeholder: '0', colSpan: '', required: false },
+      { id: 'arm', label: 'Braço contraído', type: 'number', placeholder: '0', colSpan: '', required: false },
+      { id: 'forearm', label: 'Antebraço', type: 'number', placeholder: '0', colSpan: '', required: false },
     ],
   },
   {
@@ -59,6 +61,31 @@ const SECTIONS = (students: StudentRecord[], personalName?: string) => [
       { id: 'axilarMedia', label: 'Axilar Média', type: 'number', placeholder: '0', colSpan: '' },
     ],
   },
+  {
+    id: 'anamnese',
+    title: 'Anamnese',
+    fields: [
+      { id: 'praticaAtividadeFisica', label: 'Pratica atividade física atualmente?', type: 'select', options: SIM_NAO_OPTIONS, colSpan: '', required: false },
+      { id: 'fumante', label: 'Fumante?', type: 'select', options: SIM_NAO_OPTIONS, colSpan: '', required: false },
+      { id: 'consomeAlcool', label: 'Consome bebida alcoólica?', type: 'select', options: SIM_NAO_OPTIONS, colSpan: '', required: false },
+      { id: 'historicoCardiovascularFamiliar', label: 'Histórico familiar cardiovascular?', type: 'select', options: SIM_NAO_OPTIONS, colSpan: '', required: false },
+      { id: 'possuiDoencaDiagnosticada', label: 'Possui doença diagnosticada?', type: 'select', options: SIM_NAO_OPTIONS, colSpan: '', required: false },
+      { id: 'doencaDescricao', label: 'Qual doença?', type: 'text', placeholder: 'Descreva a doença', colSpan: 'col-span-2 sm:col-span-3', required: false },
+      { id: 'usaMedicamentoContinuo', label: 'Usa medicamento contínuo?', type: 'select', options: SIM_NAO_OPTIONS, colSpan: '', required: false },
+      { id: 'medicamentoDescricao', label: 'Qual medicamento?', type: 'text', placeholder: 'Descreva o medicamento', colSpan: 'col-span-2 sm:col-span-3', required: false },
+      { id: 'possuiLesaoOuCirurgia', label: 'Possui lesão ou cirurgia prévia?', type: 'select', options: SIM_NAO_OPTIONS, colSpan: '', required: false },
+      { id: 'lesaoDescricao', label: 'Qual lesão/cirurgia?', type: 'text', placeholder: 'Descreva a lesão ou cirurgia', colSpan: 'col-span-2 sm:col-span-3', required: false },
+      { id: 'dorArticularOuMuscular', label: 'Sente dor articular ou muscular atualmente?', type: 'select', options: SIM_NAO_OPTIONS, colSpan: '', required: false },
+      { id: 'dorDescricao', label: 'Onde dói?', type: 'text', placeholder: 'Descreva o local da dor', colSpan: 'col-span-2 sm:col-span-3', required: false },
+      { id: 'objetivoTreino', label: 'Objetivo com o treino', type: 'text', placeholder: 'Ex: emagrecimento, hipertrofia, condicionamento...', colSpan: 'col-span-2 sm:col-span-4', required: false },
+    ],
+  },
+]
+
+const SIM_NAO_OPTIONS = [
+  { label: 'Não informado', value: '' },
+  { label: 'Sim', value: 'true' },
+  { label: 'Não', value: 'false' },
 ]
 
 const positiveNum = (label: string) =>
@@ -68,6 +95,15 @@ const positiveNum = (label: string) =>
     .refine(
       (v) => !isNaN(parseFloat(v)) && parseFloat(v) > 0,
       `${label} inválido`,
+    )
+
+const optionalPositiveNum = () =>
+  z
+    .string()
+    .optional()
+    .refine(
+      (v) => !v || (!isNaN(parseFloat(v)) && parseFloat(v) > 0),
+      'Valor inválido',
     )
 
 const assessmentSchema = z.object({
@@ -83,6 +119,15 @@ const assessmentSchema = z.object({
     ),
   peso: positiveNum('o peso'),
   alunoId: z.string().min(1, 'Selecione o aluno'),
+  // Perímetros (opcionais no backend — só validamos que, se preenchidos, sejam números válidos)
+  torax: optionalPositiveNum(),
+  cintura: optionalPositiveNum(),
+  abdomen: optionalPositiveNum(),
+  quadril: optionalPositiveNum(),
+  thigh: optionalPositiveNum(),
+  calf: optionalPositiveNum(),
+  arm: optionalPositiveNum(),
+  forearm: optionalPositiveNum(),
   // Dobras
   abdominal: positiveNum('o valor'),
   axilarMedia: positiveNum('o valor'),
@@ -93,6 +138,9 @@ const assessmentSchema = z.object({
   triceps: positiveNum('o valor'),
 })
 
+const parseSimNao = (value: string | undefined): boolean | undefined =>
+  value === 'true' ? true : value === 'false' ? false : undefined
+
 const maskDate = (value: string): string => {
   const digits = value.replace(/\D/g, '').slice(0, 8)
   if (digits.length <= 2) return digits
@@ -100,40 +148,11 @@ const maskDate = (value: string): string => {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
 }
 
-const STATUS_COLORS = {
-  blue: 'text-blue-400 light:text-blue-600',
-  emerald: 'text-emerald-400 light:text-emerald-600',
-  amber: 'text-amber-400 light:text-amber-600',
-  rose: 'text-rose-400 light:text-rose-600',
-}
-
-function getIMCStatus(imc: number): { color: string; label: string } {
-  if (imc < 18.5) return { color: STATUS_COLORS.blue, label: 'Abaixo do peso' }
-  if (imc < 25) return { color: STATUS_COLORS.emerald, label: 'Normal' }
-  if (imc < 30) return { color: STATUS_COLORS.amber, label: 'Sobrepeso' }
-  return { color: STATUS_COLORS.rose, label: 'Obesidade' }
-}
-
-function getBodyFatStatus(pct: number, sexo: string): { color: string; label: string } {
-  if (sexo === 'M') {
-    if (pct < 6) return { color: STATUS_COLORS.blue, label: 'Abaixo do ideal' }
-    if (pct < 18) return { color: STATUS_COLORS.emerald, label: 'Adequado' }
-    if (pct < 25) return { color: STATUS_COLORS.amber, label: 'Acima do ideal' }
-    return { color: STATUS_COLORS.rose, label: 'Obesidade' }
-  }
-  if (pct < 14) return { color: STATUS_COLORS.blue, label: 'Abaixo do ideal' }
-  if (pct < 25) return { color: STATUS_COLORS.emerald, label: 'Adequado' }
-  if (pct < 32) return { color: STATUS_COLORS.amber, label: 'Acima do ideal' }
-  return { color: STATUS_COLORS.rose, label: 'Obesidade' }
-}
-
 export const AdminNewAssessmentPage = () => {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
 
   const [expanded, setExpanded] = useState<string[]>(['dados', 'perimetros', 'dobras'])
-  const [students, setStudents] = useState<StudentRecord[]>([])
-  const [isLoadingStudents, setIsLoadingStudents] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [values, setValues] = useState<Record<string, string>>({
     date: todayBR(),
@@ -141,28 +160,28 @@ export const AdminNewAssessmentPage = () => {
   })
   const [observations, setObservations] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
 
+  const { data: studentsData, isLoading: isLoadingStudents } = useStudents(user?.id)
+  const { data: assessmentsData } = useAssessments(user?.id)
+  const students: StudentRecord[] = studentsData ?? []
+  const assessments = assessmentsData ?? []
+
+  // Preenche aluno/sexo padrão uma única vez, quando a lista de alunos chega pela primeira vez.
+  const hasSetDefaultAluno = useRef(false)
   useEffect(() => {
-    getStudentsService()
-      .then((data) => {
-        setStudents(data)
-        if (data.length > 0) {
-          setValues((prev) => ({
-            ...prev,
-            alunoId: data[0].id.toString(),
-            sexo: data[0].sexo ?? prev.sexo,
-          }))
-        } else {
-          setValues((prev) => ({ ...prev, alunoId: 'self' }))
-        }
-      })
-      .finally(() => setIsLoadingStudents(false))
+    if (hasSetDefaultAluno.current || studentsData == null) return
+    hasSetDefaultAluno.current = true
 
-    getAllAssessmentsService()
-      .then(setAssessments)
-      .catch(() => setAssessments([]))
-  }, [])
+    if (studentsData.length > 0) {
+      setValues((prev) => ({
+        ...prev,
+        alunoId: studentsData[0].id.toString(),
+        sexo: studentsData[0].sexo ?? prev.sexo,
+      }))
+    } else {
+      setValues((prev) => ({ ...prev, alunoId: 'self' }))
+    }
+  }, [studentsData])
 
   const stats = useMemo(() => {
     const now = new Date()
@@ -234,13 +253,12 @@ export const AdminNewAssessmentPage = () => {
       gordura = (4.95 / D - 4.5) * 100
     }
 
-    const massaMagra =
-      gordura !== null && !isNaN(peso) ? peso * (1 - gordura / 100) : null
+    const massaMagra = calcMassaMagra(isNaN(peso) ? null : peso, gordura)
 
     return { gordura, iac, imc, massaMagra, sexo }
   }, [values])
 
-  const imcStatus = computed.imc != null ? getIMCStatus(computed.imc) : null
+  const imcStatus = computed.imc != null ? getImcStatus(computed.imc) : null
   const fatStatus =
     computed.gordura != null ? getBodyFatStatus(computed.gordura, computed.sexo) : null
 
@@ -297,7 +315,7 @@ export const AdminNewAssessmentPage = () => {
       const payload = {
         ...(isSelf
           ? { paraMim: true, sexo: (values.sexo || 'F') as 'M' | 'F' }
-          : { alunoId: parseInt(values.alunoId) }),
+          : { alunoId: parseInt(values.alunoId, 10) }),
         peso: parseFloat(values.peso),
         altura: parseFloat(values.altura) / 100,
         idade: parseInt(values.idade),
@@ -316,9 +334,24 @@ export const AdminNewAssessmentPage = () => {
         perimetroPanturrilha: values.calf ? parseFloat(values.calf) : undefined,
         perimetroBraco: values.arm ? parseFloat(values.arm) : undefined,
         perimetroAntebraco: values.forearm ? parseFloat(values.forearm) : undefined,
+        praticaAtividadeFisica: parseSimNao(values.praticaAtividadeFisica),
+        fumante: parseSimNao(values.fumante),
+        consomeAlcool: parseSimNao(values.consomeAlcool),
+        possuiDoencaDiagnosticada: parseSimNao(values.possuiDoencaDiagnosticada),
+        doencaDescricao: values.doencaDescricao || undefined,
+        usaMedicamentoContinuo: parseSimNao(values.usaMedicamentoContinuo),
+        medicamentoDescricao: values.medicamentoDescricao || undefined,
+        possuiLesaoOuCirurgia: parseSimNao(values.possuiLesaoOuCirurgia),
+        lesaoDescricao: values.lesaoDescricao || undefined,
+        dorArticularOuMuscular: parseSimNao(values.dorArticularOuMuscular),
+        dorDescricao: values.dorDescricao || undefined,
+        historicoCardiovascularFamiliar: parseSimNao(values.historicoCardiovascularFamiliar),
+        objetivoTreino: values.objetivoTreino || undefined,
+        observacoesAnamnese: observations || undefined,
       }
 
       const assessment = await createAssessmentService(payload)
+      await invalidateAssessments()
       const studentName =
         assessment.alunoId == null
           ? (user?.name ?? 'Você')
@@ -461,7 +494,9 @@ export const AdminNewAssessmentPage = () => {
                           <div key={field.id} className={field.colSpan}>
                             <label className="mb-1.5 block text-xs font-medium text-mute">
                               {field.label}
-                              <span className="ml-0.5 text-rose-400">*</span>
+                              {('required' in field ? field.required : true) && (
+                                <span className="ml-0.5 text-rose-400">*</span>
+                              )}
                             </label>
                             {field.type === 'select' ? (
                               <select

@@ -1,27 +1,19 @@
-import { Activity, Bell, Camera, Download, Dumbbell, KeyRound, Pencil, UserPen } from 'lucide-react'
+import { Activity, AlertCircle, Bell, Camera, Download, Dumbbell, KeyRound, Pencil, UserPen } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import type { WorkoutRecord } from '../@types/workout'
+import { BodyMetricsCharts } from '../components/charts/BodyMetricsCharts'
 import { DashboardShell } from '../components/layout/DashboardShell'
 import { ChangePasswordModal } from '../components/modules/admin/ChangePasswordModal'
 import { EditPersonalDataModal } from '../components/modules/admin/EditPersonalDataModal'
+import { ExportWorkoutsModal } from '../components/modules/admin/ExportWorkoutsModal'
 import { PageHeader } from '../components/ui/PageHeader'
 import { useAuth } from '../hooks/useAuth'
 import { getDashboardNavItems } from '../utils/dashboardNav'
-import { exportWorkoutPdf } from '../utils/workoutPdf'
-import { getStudentsService } from '../services/students'
-import { getAllWorkoutsService } from '../services/workouts'
-import { getAllAssessmentsService, type AssessmentRecord } from '../services/assessments'
+import { exportWorkoutsPdf } from '../utils/workoutPdf'
+import { useStudents } from '../hooks/useStudents'
+import { useWorkouts } from '../hooks/useWorkouts'
+import { useAssessments } from '../hooks/useAssessments'
 import { formatPhone } from '../utils/formatPhone'
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string }> = {
@@ -41,24 +33,23 @@ export const AdminProfilePage = () => {
   const { logout, user } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeModal, setActiveModal] = useState<'data' | 'password' | null>(null)
-  const [workouts, setWorkouts] = useState<WorkoutRecord[]>([])
-  const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
-  const [counts, setCounts] = useState({ alunos: 0, avaliacoes: 0 })
+  const [exportingWorkout, setExportingWorkout] = useState<WorkoutRecord | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    Promise.all([getStudentsService(), getAllWorkoutsService(), getAllAssessmentsService()])
-      .then(([students, allWorkouts, allAssessments]) => {
-        setWorkouts(allWorkouts)
-        setAssessments(allAssessments)
-        setCounts({ alunos: students.length, avaliacoes: allAssessments.length })
-      })
-      .catch(() => {
-        setWorkouts([])
-        setAssessments([])
-        setCounts({ alunos: 0, avaliacoes: 0 })
-      })
-  }, [])
+  const { data: studentsData, error: studentsError } = useStudents(user?.id)
+  const { data: workoutsData, error: workoutsError } = useWorkouts(user?.id)
+  const { data: assessmentsData, error: assessmentsError } = useAssessments(user?.id)
+
+  const workouts = workoutsData ?? []
+  const assessments = assessmentsData ?? []
+  const counts = {
+    alunos: studentsData?.length ?? 0,
+    avaliacoes: assessmentsData?.length ?? 0,
+  }
+  const loadError =
+    studentsError || workoutsError || assessmentsError
+      ? 'Não foi possível carregar seus dados agora. Tente recarregar a página.'
+      : ''
 
   useEffect(() => {
     if (!menuOpen) {
@@ -86,7 +77,10 @@ export const AdminProfilePage = () => {
     }
   }, [menuOpen])
 
-  const selfWorkouts = workouts.filter((workout) => workout.id_aluno === null)
+  const selfWorkouts = useMemo(
+    () => workouts.filter((workout) => workout.id_aluno === null),
+    [workouts],
+  )
   const selfAssessments = useMemo(
     () => assessments.filter((assessment) => assessment.alunoId == null),
     [assessments],
@@ -106,15 +100,6 @@ export const AdminProfilePage = () => {
         }
       })
   }, [selfAssessments])
-
-  const tooltipStyle = {
-    backgroundColor: 'var(--ui-surface)',
-    border: '1px solid var(--ui-line)',
-    borderRadius: '12px',
-    color: 'var(--ui-ink)',
-    fontSize: '12px',
-  }
-  const chartTick = { fill: 'var(--ui-faint)', fontSize: 10 }
 
   const openModal = (modal: 'data' | 'password') => {
     setMenuOpen(false)
@@ -145,6 +130,13 @@ export const AdminProfilePage = () => {
       />
 
       <div className="mx-auto w-full max-w-4xl space-y-4">
+        {loadError ? (
+          <p className="flex items-center gap-2 text-sm text-rose-400 light:text-rose-600">
+            <AlertCircle size={16} />
+            {loadError}
+          </p>
+        ) : null}
+
         <section className="p-5">
           <div className="flex items-center gap-4">
             <div className="relative" ref={menuRef}>
@@ -247,7 +239,7 @@ export const AdminProfilePage = () => {
                     <button
                       aria-label="Exportar PDF"
                       className="rounded-xl p-2 text-faint transition hover:bg-elev hover:text-ink"
-                      onClick={() => exportWorkoutPdf(workout, user?.name)}
+                      onClick={() => setExportingWorkout(workout)}
                       title="Exportar PDF"
                       type="button"
                     >
@@ -282,58 +274,8 @@ export const AdminProfilePage = () => {
               <p className="text-sm">Você ainda não registrou avaliações para si.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 p-5 lg:grid-cols-2">
-              <div>
-                <h4 className="text-sm font-semibold text-ink">Peso &amp; % Gordura</h4>
-                <p className="mb-3 text-xs text-faint">Evolução histórica</p>
-                <ResponsiveContainer height={180} width="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid stroke="var(--ui-line)" strokeDasharray="3 3" />
-                    <XAxis dataKey="month" tick={chartTick} />
-                    <YAxis tick={chartTick} width={30} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Legend wrapperStyle={{ fontSize: '11px' }} />
-                    <Line
-                      dataKey="weight"
-                      dot={{ fill: '#8b5cf6', r: 3 }}
-                      name="Peso (kg)"
-                      stroke="#8b5cf6"
-                      strokeWidth={2}
-                      type="monotone"
-                    />
-                    <Line
-                      dataKey="bodyFat"
-                      dot={{ fill: '#3b82f6', r: 3 }}
-                      name="% Gordura"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      type="monotone"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-semibold text-ink">Massa Muscular</h4>
-                <p className="mb-3 text-xs text-faint">Evolução histórica</p>
-                <ResponsiveContainer height={180} width="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid stroke="var(--ui-line)" strokeDasharray="3 3" />
-                    <XAxis dataKey="month" tick={chartTick} />
-                    <YAxis tick={chartTick} width={30} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Legend wrapperStyle={{ fontSize: '11px' }} />
-                    <Line
-                      dataKey="muscle"
-                      dot={{ fill: '#10b981', r: 3 }}
-                      name="Massa magra (kg)"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      type="monotone"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+            <div className="p-5">
+              <BodyMetricsCharts bare data={chartData} />
             </div>
           )}
         </section>
@@ -344,6 +286,17 @@ export const AdminProfilePage = () => {
       ) : null}
       {activeModal === 'password' ? (
         <ChangePasswordModal onClose={() => setActiveModal(null)} />
+      ) : null}
+      {exportingWorkout ? (
+        <ExportWorkoutsModal
+          candidates={selfWorkouts}
+          onClose={() => setExportingWorkout(null)}
+          onConfirm={(selected) => {
+            exportWorkoutsPdf(selected, user?.name)
+            setExportingWorkout(null)
+          }}
+          preSelected={exportingWorkout}
+        />
       ) : null}
     </DashboardShell>
   )

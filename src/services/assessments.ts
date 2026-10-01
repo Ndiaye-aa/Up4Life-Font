@@ -26,6 +26,20 @@ export interface AssessmentRecord {
   iac?: number
   percentualGordura?: number
   dataAvaliacao: string
+  praticaAtividadeFisica?: boolean
+  fumante?: boolean
+  consomeAlcool?: boolean
+  possuiDoencaDiagnosticada?: boolean
+  doencaDescricao?: string
+  usaMedicamentoContinuo?: boolean
+  medicamentoDescricao?: string
+  possuiLesaoOuCirurgia?: boolean
+  lesaoDescricao?: string
+  dorArticularOuMuscular?: boolean
+  dorDescricao?: string
+  historicoCardiovascularFamiliar?: boolean
+  objetivoTreino?: string
+  observacoesAnamnese?: string
 }
 
 export interface CreateAssessmentPayload {
@@ -51,6 +65,20 @@ export interface CreateAssessmentPayload {
   perimetroPanturrilha?: number
   perimetroBraco?: number
   perimetroAntebraco?: number
+  praticaAtividadeFisica?: boolean
+  fumante?: boolean
+  consomeAlcool?: boolean
+  possuiDoencaDiagnosticada?: boolean
+  doencaDescricao?: string
+  usaMedicamentoContinuo?: boolean
+  medicamentoDescricao?: string
+  possuiLesaoOuCirurgia?: boolean
+  lesaoDescricao?: string
+  dorArticularOuMuscular?: boolean
+  dorDescricao?: string
+  historicoCardiovascularFamiliar?: boolean
+  objetivoTreino?: string
+  observacoesAnamnese?: string
 }
 
 export const createAssessmentService = async (

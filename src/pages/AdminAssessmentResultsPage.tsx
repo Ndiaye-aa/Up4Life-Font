@@ -10,32 +10,15 @@ import {
   Scale,
   TrendingDown,
   TrendingUp,
-  Loader2,
 } from 'lucide-react'
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { BodyMetricsCharts } from '../components/charts/BodyMetricsCharts'
 import { DashboardShell } from '../components/layout/DashboardShell'
 import { useAuth } from '../hooks/useAuth'
 import { getDashboardNavItems } from '../utils/dashboardNav'
 import { getStudentAssessmentsService, type AssessmentRecord } from '../services/assessments'
 import { todayBR } from '../utils/formatDate'
-
-const EVOLUTION_DATA = [
-  { bodyFat: 27.2, month: 'Nov', muscle: 48.1, weight: 68.5 },
-  { bodyFat: 26.1, month: 'Dez', muscle: 48.8, weight: 67.2 },
-  { bodyFat: 25.5, month: 'Jan', muscle: 49.2, weight: 66.8 },
-  { bodyFat: 25.0, month: 'Fev', muscle: 50.1, weight: 65.5 },
-  { bodyFat: 24.8, month: 'Mar', muscle: 50.8, weight: 64.9 },
-  { bodyFat: 24.3, month: 'Abr', muscle: 51.2, weight: 64.2 },
-]
+import { calcMassaMagra } from '../utils/bodyMetrics'
+import { ANAMNESE_DESCRIPTIONS, ANAMNESE_QUESTIONS, exportAssessmentPdf } from '../utils/assessmentPdf'
 
 const PERIMETROS_DEFAULT = [
   { diff: -3, label: 'Tórax', prev: '95 cm', value: '92 cm' },
@@ -87,20 +70,24 @@ export const AdminAssessmentResultsPage = () => {
     return history
       .slice()
       .reverse()
-      .map((a) => {
-        const mm = a.percentualGordura ? a.peso * (1 - a.percentualGordura / 100) : 0
-        return {
-          bodyFat: a.percentualGordura ? parseFloat(a.percentualGordura.toString()) : 0,
-          month: new Date(a.dataAvaliacao).toLocaleDateString('pt-BR', {
-            month: 'short',
-          }),
-          muscle: parseFloat(mm.toFixed(1)),
-          weight: parseFloat(a.peso.toString()),
-        }
-      })
+      .map((a) => ({
+        bodyFat: a.percentualGordura != null ? parseFloat(a.percentualGordura.toString()) : null,
+        month: new Date(a.dataAvaliacao).toLocaleDateString('pt-BR', {
+          month: 'short',
+        }),
+        muscle: calcMassaMagra(a.peso, a.percentualGordura),
+        weight: parseFloat(a.peso.toString()),
+      }))
   }, [history])
 
   const previousAssessment = history.length > 1 ? history[1] : null
+  const latestAssessment = history.length > 0 ? history[0] : null
+
+  const hasAnamnese =
+    latestAssessment != null &&
+    [...ANAMNESE_QUESTIONS, ...ANAMNESE_DESCRIPTIONS].some(
+      (f) => latestAssessment[f.key] != null && latestAssessment[f.key] !== '',
+    )
 
   const getTrend = (current: string | number, prev: string | number | undefined | null) => {
     if (prev === undefined || prev === null) return 0
@@ -186,16 +173,6 @@ export const AdminAssessmentResultsPage = () => {
       ]
     : PERIMETROS_DEFAULT
 
-  const tooltipStyle = {
-    backgroundColor: 'var(--ui-surface)',
-    border: '1px solid var(--ui-line)',
-    borderRadius: '12px',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-    color: 'var(--ui-ink)',
-    fontSize: '12px',
-  }
-  const chartTick = { fill: 'var(--ui-faint)', fontSize: 10 }
-
   return (
     <DashboardShell
       contact={user?.phone ?? ''}
@@ -230,6 +207,15 @@ export const AdminAssessmentResultsPage = () => {
           </div>
           <button
             className="inline-flex flex-shrink-0 items-center gap-2 rounded-xl border border-line px-3 py-2.5 text-sm text-ink transition hover:bg-elev"
+            onClick={() =>
+              exportAssessmentPdf({
+                date,
+                latestAssessment,
+                metrics: metrics.map((m) => ({ label: m.label, unit: m.unit, value: m.value })),
+                name,
+                perimetros: perimetros.map((p) => ({ label: p.label, value: p.value })),
+              })
+            }
             type="button"
           >
             <FileText size={14} />
@@ -289,75 +275,7 @@ export const AdminAssessmentResultsPage = () => {
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="card p-5">
-            <h2 className="font-display text-base font-semibold text-ink">
-              Peso &amp; % Gordura
-            </h2>
-            <p className="mb-4 text-xs text-faint">Evolução histórica</p>
-            {isLoading ? (
-              <div className="flex h-[180px] items-center justify-center">
-                <Loader2 className="animate-spin text-faint" />
-              </div>
-            ) : (
-              <ResponsiveContainer height={180} width="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid stroke="var(--ui-line)" strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={chartTick} />
-                  <YAxis tick={chartTick} width={30} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Line
-                    dataKey="weight"
-                    dot={{ fill: '#8b5cf6', r: 3 }}
-                    name="Peso (kg)"
-                    stroke="#8b5cf6"
-                    strokeWidth={2}
-                    type="monotone"
-                  />
-                  <Line
-                    dataKey="bodyFat"
-                    dot={{ fill: '#3b82f6', r: 3 }}
-                    name="% Gordura"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    type="monotone"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-
-          <div className="card p-5">
-            <h2 className="font-display text-base font-semibold text-ink">
-              Massa Muscular
-            </h2>
-            <p className="mb-4 text-xs text-faint">Evolução histórica</p>
-            {isLoading ? (
-              <div className="flex h-[180px] items-center justify-center">
-                <Loader2 className="animate-spin text-faint" />
-              </div>
-            ) : (
-              <ResponsiveContainer height={180} width="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid stroke="var(--ui-line)" strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={chartTick} />
-                  <YAxis tick={chartTick} width={30} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend wrapperStyle={{ fontSize: '11px' }} />
-                  <Line
-                    dataKey="muscle"
-                    dot={{ fill: '#10b981', r: 3 }}
-                    name="Massa magra (kg)"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    type="monotone"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
+        <BodyMetricsCharts data={chartData} isLoading={isLoading} />
 
         {/* Perimeters comparison */}
         <div className="card overflow-hidden">
@@ -392,6 +310,32 @@ export const AdminAssessmentResultsPage = () => {
             ))}
           </div>
         </div>
+
+        {/* Anamnese */}
+        {hasAnamnese && (
+          <div className="card overflow-hidden">
+            <div className="border-b border-line p-5">
+              <h2 className="font-display text-base font-semibold text-ink">Anamnese</h2>
+              <p className="mt-0.5 text-xs text-faint">Respostas coletadas nesta avaliação</p>
+            </div>
+            <div className="divide-y divide-line">
+              {ANAMNESE_QUESTIONS.filter((q) => latestAssessment![q.key] != null).map((q) => (
+                <div key={q.key} className="flex items-center justify-between px-5 py-3">
+                  <span className="text-sm text-mute">{q.label}</span>
+                  <span className="text-sm text-ink">{latestAssessment![q.key] ? 'Sim' : 'Não'}</span>
+                </div>
+              ))}
+              {ANAMNESE_DESCRIPTIONS.filter(
+                (d) => latestAssessment![d.key] != null && latestAssessment![d.key] !== '',
+              ).map((d) => (
+                <div key={d.key} className="px-5 py-3">
+                  <p className="text-sm text-mute">{d.label}</p>
+                  <p className="mt-0.5 text-sm text-ink">{String(latestAssessment![d.key])}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </DashboardShell>
   )

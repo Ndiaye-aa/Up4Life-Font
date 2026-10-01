@@ -49,7 +49,7 @@ export const StudentProfileModal = ({ onClose, student }: Props) => {
       .then(setWorkouts)
       .catch(() => {
         setWorkouts([])
-        setLoadError('Não foi possível carregar os dados deste aluno agora.')
+        setLoadError('Não foi possível carregar os treinos deste aluno agora.')
       })
       .finally(() => setIsLoadingWorkouts(false))
 
@@ -57,7 +57,7 @@ export const StudentProfileModal = ({ onClose, student }: Props) => {
       .then((records) => setLatestAssessment(records[0] ?? null))
       .catch(() => {
         setLatestAssessment(null)
-        setLoadError('Não foi possível carregar os dados deste aluno agora.')
+        setLoadError('Não foi possível carregar as avaliações deste aluno agora.')
       })
   }, [student.id])
 

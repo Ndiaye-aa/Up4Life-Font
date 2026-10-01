@@ -1,9 +1,10 @@
-import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Dumbbell, Trophy } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Dumbbell, Loader2, Trophy } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { DashboardShell } from '../components/layout/DashboardShell'
 import { useAuth } from '../hooks/useAuth'
 import { getDashboardNavItems } from '../utils/dashboardNav'
+import { getStudentWorkoutsService } from '../services/workouts'
 import type { WorkoutRecord } from '../@types/workout'
 
 function RestTimer({ seconds, onDone }: { seconds: number; onDone: () => void }) {
@@ -55,9 +56,13 @@ function RestTimer({ seconds, onDone }: { seconds: number; onDone: () => void })
 export const StudentWorkoutSessionPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { id } = useParams<{ id: string }>()
   const { logout, user } = useAuth()
 
-  const workout = location.state?.workout as WorkoutRecord | undefined
+  const stateWorkout = location.state?.workout as WorkoutRecord | undefined
+  const [fetchedWorkout, setFetchedWorkout] = useState<WorkoutRecord | undefined>(undefined)
+  const [isFetchingWorkout, setIsFetchingWorkout] = useState(!stateWorkout)
+  const workout = stateWorkout ?? fetchedWorkout
 
   const [exIdx, setExIdx] = useState(0)
   const [completedSets, setCompletedSets] = useState<Record<number, number>>({})
@@ -69,6 +74,29 @@ export const StudentWorkoutSessionPage = () => {
   useEffect(() => {
     startRef.current = Date.now()
   }, [])
+
+  // Sem workout no state (F5, link direto ou bookmark): busca pelo id da URL.
+  useEffect(() => {
+    if (stateWorkout || !user?.id || !id) {
+      setIsFetchingWorkout(false)
+      return
+    }
+    let cancelled = false
+    const workoutId = Number(id)
+
+    getStudentWorkoutsService(user.id)
+      .then((workouts) => {
+        if (cancelled) return
+        setFetchedWorkout(workouts.find((w) => w.id === workoutId))
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return
+        console.error('Erro ao carregar treino da sessão:', error)
+      })
+      .finally(() => { if (!cancelled) setIsFetchingWorkout(false) })
+
+    return () => { cancelled = true }
+  }, [stateWorkout, user?.id, id])
 
   const exercises = workout?.exercicios ?? []
   const current = exercises[exIdx]
@@ -106,6 +134,14 @@ export const StudentWorkoutSessionPage = () => {
       setResting(false)
     }
   }, [exIdx])
+
+  if (isFetchingWorkout) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-canvas">
+        <Loader2 className="animate-spin text-accent" size={24} />
+      </div>
+    )
+  }
 
   if (!workout) {
     return (

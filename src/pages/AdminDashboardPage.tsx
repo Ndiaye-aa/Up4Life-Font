@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import type { StudentRecord } from '../@types/student'
@@ -11,9 +11,10 @@ import { PushOptInBanner } from '../components/ui/PushOptInBanner'
 import { StatStrip } from '../components/ui/StatStrip'
 import { useAuth } from '../hooks/useAuth'
 import { getDashboardNavItems } from '../utils/dashboardNav'
-import { getStudentsService, updateStudentStatusService } from '../services/students'
-import { getAllWorkoutsService } from '../services/workouts'
-import { getAllAssessmentsService } from '../services/assessments'
+import { updateStudentStatusService } from '../services/students'
+import { useStudents, invalidateStudents } from '../hooks/useStudents'
+import { useWorkouts } from '../hooks/useWorkouts'
+import { useAssessments } from '../hooks/useAssessments'
 
 interface StudentCard {
   goal: string
@@ -49,31 +50,18 @@ export const AdminDashboardPage = () => {
   const { logout, user } = useAuth()
   const personalId = user?.id
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [students, setStudents] = useState<StudentCard[]>([])
-  const [workoutsCount, setWorkoutsCount] = useState<number | null>(null)
-  const [assessmentsCount, setAssessmentsCount] = useState<number | null>(null)
   const [isStudentsListOpen, setIsStudentsListOpen] = useState(false)
 
-  useEffect(() => {
-    if (!personalId) return
+  const { data: studentsData } = useStudents(personalId)
+  const { data: workoutsData } = useWorkouts(personalId)
+  const { data: assessmentsData } = useAssessments(personalId)
 
-    async function load() {
-      try {
-        const [studentsData, workoutsData, assessmentsData] = await Promise.all([
-          getStudentsService(),
-          getAllWorkoutsService().catch(() => []),
-          getAllAssessmentsService().catch(() => []),
-        ])
-        setStudents(studentsData.map(mapStudentRecordToCard))
-        setWorkoutsCount(workoutsData.length)
-        setAssessmentsCount(assessmentsData.length)
-      } catch (error) {
-        console.error('Erro ao carregar dashboard:', error)
-      }
-    }
-
-    load()
-  }, [personalId])
+  const students = useMemo(
+    () => (studentsData ?? []).map(mapStudentRecordToCard),
+    [studentsData],
+  )
+  const workoutsCount = workoutsData?.length ?? null
+  const assessmentsCount = assessmentsData?.length ?? null
 
   const activeStudents = useMemo(
     () => students.filter((student) => student.status === 'ativo'),
@@ -81,15 +69,17 @@ export const AdminDashboardPage = () => {
   )
 
   const handleToggleStatus = async (student: StudentCard) => {
-    const updated = await updateStudentStatusService(
-      student.id,
-      student.status !== 'ativo',
-    )
-    setStudents((currentStudents) =>
-      currentStudents.map((current) =>
-        current.id === student.id ? mapStudentRecordToCard(updated) : current,
-      ),
-    )
+    try {
+      await updateStudentStatusService(student.id, student.status !== 'ativo')
+      await invalidateStudents()
+    } catch (error) {
+      console.error('Erro ao atualizar status do aluno:', error)
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível atualizar o status do aluno agora.',
+      )
+    }
   }
 
   const metrics = useMemo(() => [
@@ -129,11 +119,8 @@ export const AdminDashboardPage = () => {
       {isModalOpen ? (
         <NewStudentModal
           onClose={() => setIsModalOpen(false)}
-          onCreated={(student) => {
-            setStudents((currentStudents) => [
-              mapStudentRecordToCard(student),
-              ...currentStudents,
-            ])
+          onCreated={() => {
+            invalidateStudents()
           }}
         />
       ) : null}

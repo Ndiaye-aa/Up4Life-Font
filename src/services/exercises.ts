@@ -7,7 +7,8 @@ export interface ExerciseFromApi {
 }
 
 export const getAllExercisesService = async (): Promise<ExerciseFromApi[]> => {
-  return api('/exercicios')
+  const result = await api('/exercicios')
+  return Array.isArray(result) ? result : []
 }
 
 export interface CreateExercisePayload {

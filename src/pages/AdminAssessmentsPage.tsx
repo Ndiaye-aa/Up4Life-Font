@@ -7,15 +7,15 @@ import { StatStrip } from '../components/ui/StatStrip'
 import { ScheduleAssessmentModal } from '../components/modules/admin/ScheduleAssessmentModal'
 import { useAuth } from '../hooks/useAuth'
 import { getDashboardNavItems } from '../utils/dashboardNav'
-import { getAllAssessmentsService, type AssessmentRecord } from '../services/assessments'
-import { getStudentsService } from '../services/students'
+import { useAssessments } from '../hooks/useAssessments'
+import { useStudents } from '../hooks/useStudents'
+import { calcMassaMagra, getImcStatus, getImcStatusPillClass } from '../utils/bodyMetrics'
 import {
   deleteAssessmentScheduleService,
   getAssessmentSchedulesService,
   updateAssessmentScheduleStatusService,
 } from '../services/assessmentSchedule'
 import type { AssessmentScheduleRecord, StatusAgendamento } from '../@types/assessmentSchedule'
-import type { StudentRecord } from '../@types/student'
 import { formatDateBR } from '../utils/formatDate'
 
 const SCHEDULE_STATUS_STYLES: Record<StatusAgendamento, { className: string; label: string }> = {
@@ -26,10 +26,8 @@ const SCHEDULE_STATUS_STYLES: Record<StatusAgendamento, { className: string; lab
 
 const getBmiStatus = (imc?: number) => {
   if (!imc) return { className: 'bg-elev text-mute', label: '—' }
-  if (imc < 18.5) return { className: 'bg-blue-500/12 text-blue-400 light:bg-blue-50 light:text-blue-600', label: 'Abaixo do peso' }
-  if (imc < 25) return { className: 'bg-emerald-500/12 text-emerald-400 light:bg-emerald-50 light:text-emerald-600', label: 'Normal' }
-  if (imc < 30) return { className: 'bg-amber-500/12 text-amber-400 light:bg-amber-50 light:text-amber-600', label: 'Sobrepeso' }
-  return { className: 'bg-rose-500/12 text-rose-400 light:bg-rose-50 light:text-rose-600', label: 'Obesidade' }
+  const { label } = getImcStatus(imc)
+  return { className: getImcStatusPillClass(label), label }
 }
 
 const buildInitials = (name: string) =>
@@ -42,34 +40,37 @@ export const AdminAssessmentsPage = () => {
   const alunoId = searchParams.get('aluno') ? Number(searchParams.get('aluno')) : null
 
   const [tab, setTab] = useState<'agendamentos' | 'concluidas'>('agendamentos')
-  const [assessments, setAssessments] = useState<AssessmentRecord[]>([])
-  const [students, setStudents] = useState<StudentRecord[]>([])
   const [schedules, setSchedules] = useState<AssessmentScheduleRecord[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [isLoadingSchedules, setIsLoadingSchedules] = useState(true)
+  const [scheduleLoadError, setScheduleLoadError] = useState<string | null>(null)
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
   const [scheduleActionId, setScheduleActionId] = useState<number | null>(null)
   const [editingSchedule, setEditingSchedule] = useState<AssessmentScheduleRecord | null>(null)
 
+  const { data: assessmentsData, isLoading: isLoadingAssessments, error: assessmentsError } = useAssessments(user?.id)
+  const { data: studentsData, isLoading: isLoadingStudents, error: studentsError } = useStudents(user?.id)
+
+  const assessments = assessmentsData ?? []
+  const students = studentsData ?? []
+  const isLoading = (isLoadingAssessments && assessmentsData == null) || (isLoadingStudents && studentsData == null) || isLoadingSchedules
+  const loadError = assessmentsError || studentsError
+    ? 'Não foi possível carregar as avaliações. Tente novamente.'
+    : scheduleLoadError
+
   useEffect(() => {
-    async function load() {
-      try {
-        const [as_, ss, sc] = await Promise.all([
-          getAllAssessmentsService(),
-          getStudentsService(),
-          getAssessmentSchedulesService().catch(() => []),
-        ])
-        setAssessments(as_)
-        setStudents(ss)
-        setSchedules(sc)
-      } catch (error) {
-        setLoadError('Não foi possível carregar as avaliações. Tente novamente.')
-        console.error('Erro ao carregar avaliações:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    load()
+    let cancelled = false
+
+    getAssessmentSchedulesService()
+      .then((sc) => { if (!cancelled) setSchedules(sc) })
+      .catch((error: unknown) => {
+        if (cancelled) return
+        console.error('Erro ao carregar agendamentos de avaliação:', error)
+        setSchedules([])
+        setScheduleLoadError('Não foi possível carregar os agendamentos agora.')
+      })
+      .finally(() => { if (!cancelled) setIsLoadingSchedules(false) })
+
+    return () => { cancelled = true }
   }, [])
 
   const handleUpdateScheduleStatus = async (id: number, status: StatusAgendamento) => {
@@ -132,9 +133,8 @@ export const AdminAssessmentsPage = () => {
             ? (user?.name ?? 'Você')
             : (studentMap.get(a.alunoId)?.nome ?? `Aluno ${a.alunoId}`)
         const bmiStatus = getBmiStatus(a.imc)
-        const massaMagra = a.percentualGordura && a.peso
-          ? (a.peso * (1 - a.percentualGordura / 100)).toFixed(1)
-          : undefined
+        const massaMagraValue = calcMassaMagra(a.peso, a.percentualGordura)
+        const massaMagra = massaMagraValue != null ? massaMagraValue.toFixed(1) : undefined
         return {
           id: a.id,
           alunoId: a.alunoId,

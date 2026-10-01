@@ -1,21 +1,13 @@
 import { Activity, Calendar, Dumbbell, Heart, Loader2, Minus, Scale, TrendingDown, TrendingUp } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { BodyMetricsCharts } from '../components/charts/BodyMetricsCharts'
 import { DashboardShell } from '../components/layout/DashboardShell'
 import { PageHeader } from '../components/ui/PageHeader'
 import { useAuth } from '../hooks/useAuth'
 import { type AssessmentRecord, getStudentAssessmentsService } from '../services/assessments'
 import { getDashboardNavItems } from '../utils/dashboardNav'
+import { calcMassaMagra as calcMassaMagraRaw, getImcStatus, getImcStatusPillClass } from '../utils/bodyMetrics'
 
 function formatDate(isoDate: string): string {
   const d = new Date(isoDate)
@@ -23,23 +15,16 @@ function formatDate(isoDate: string): string {
 }
 
 function imcStatus(imc: number): string {
-  if (imc < 18.5) return 'Abaixo'
-  if (imc < 25) return 'Normal'
-  if (imc < 30) return 'Sobrepeso'
-  return 'Obesidade'
+  const { label } = getImcStatus(imc)
+  return label === 'Abaixo do peso' ? 'Abaixo' : label
 }
 
 function imcStatusColor(status: string): string {
-  if (status === 'Normal') return 'bg-emerald-500/12 text-emerald-400 light:bg-emerald-50 light:text-emerald-600'
-  if (status === 'Abaixo') return 'bg-blue-500/12 text-blue-400 light:bg-blue-50 light:text-blue-600'
-  if (status === 'Sobrepeso') return 'bg-amber-500/12 text-amber-400 light:bg-amber-50 light:text-amber-600'
-  return 'bg-rose-500/12 text-rose-400 light:bg-rose-50 light:text-rose-600'
+  return getImcStatusPillClass(status === 'Abaixo' ? 'Abaixo do peso' : status)
 }
 
 function calcMassaMagra(a: AssessmentRecord): number | null {
-  if (a.percentualGordura == null) return null
-  if (a.percentualGordura < 0 || a.percentualGordura > 100) return null
-  return parseFloat((a.peso * (1 - a.percentualGordura / 100)).toFixed(1))
+  return calcMassaMagraRaw(a.peso, a.percentualGordura)
 }
 
 export const StudentAssessmentsPage = () => {
@@ -50,9 +35,13 @@ export const StudentAssessmentsPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentRecord | null>(null)
 
-  const fetchAssessments = (id: number) => {
+  const requestIdRef = useRef(0)
+
+  const fetchAssessments = useCallback((id: number) => {
+    const requestId = ++requestIdRef.current
     getStudentAssessmentsService(id)
       .then((data) => {
+        if (requestIdRef.current !== requestId) return
         setError(null)
         const sorted = [...data].sort(
           (a, b) => new Date(b.dataAvaliacao).getTime() - new Date(a.dataAvaliacao).getTime(),
@@ -61,19 +50,20 @@ export const StudentAssessmentsPage = () => {
         setSelectedAssessment(sorted[0] ?? null)
       })
       .catch((err: unknown) => {
+        if (requestIdRef.current !== requestId) return
         setAssessments([])
         setSelectedAssessment(null)
         setError(err instanceof Error ? err.message : 'Erro ao carregar avaliações.')
       })
-      .finally(() => setLoading(false))
-  }
+      .finally(() => { if (requestIdRef.current === requestId) setLoading(false) })
+  }, [])
 
   useEffect(() => {
     if (!user?.id) {
       return
     }
     fetchAssessments(user.id)
-  }, [user?.id])
+  }, [user?.id, fetchAssessments])
 
   const selectedIndex = assessments.findIndex((a) => a.id === selectedAssessment?.id)
   const previousAssessment = selectedIndex >= 0 ? (assessments[selectedIndex + 1] ?? null) : null
@@ -169,16 +159,6 @@ export const StudentAssessmentsPage = () => {
         { label: 'IMC', value: '-' },
         { label: 'Gordura', value: '-' },
       ]
-
-  const tooltipStyle = {
-    backgroundColor: 'var(--ui-surface)',
-    border: '1px solid var(--ui-line)',
-    borderRadius: '12px',
-    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-    color: 'var(--ui-ink)',
-    fontSize: '12px',
-  }
-  const chartTick = { fill: 'var(--ui-faint)', fontSize: 10 }
 
   return (
     <DashboardShell
@@ -308,40 +288,7 @@ export const StudentAssessmentsPage = () => {
             </section>
 
             {/* Charts */}
-            {chartData.length > 1 && (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="card p-5">
-                  <h2 className="font-display text-base font-semibold text-ink">Peso &amp; % Gordura</h2>
-                  <p className="mb-4 text-xs text-faint">Evolução histórica</p>
-                  <ResponsiveContainer height={180} width="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid stroke="var(--ui-line)" strokeDasharray="3 3" />
-                      <XAxis dataKey="month" tick={chartTick} />
-                      <YAxis tick={chartTick} width={30} />
-                      <Tooltip contentStyle={tooltipStyle} />
-                      <Legend wrapperStyle={{ fontSize: '11px' }} />
-                      <Line connectNulls dataKey="weight" dot={{ fill: '#8b5cf6', r: 3 }} name="Peso (kg)" stroke="#8b5cf6" strokeWidth={2} type="monotone" />
-                      <Line connectNulls dataKey="bodyFat" dot={{ fill: '#3b82f6', r: 3 }} name="% Gordura" stroke="#3b82f6" strokeWidth={2} type="monotone" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="card p-5">
-                  <h2 className="font-display text-base font-semibold text-ink">Massa Muscular</h2>
-                  <p className="mb-4 text-xs text-faint">Evolução histórica</p>
-                  <ResponsiveContainer height={180} width="100%">
-                    <LineChart data={chartData}>
-                      <CartesianGrid stroke="var(--ui-line)" strokeDasharray="3 3" />
-                      <XAxis dataKey="month" tick={chartTick} />
-                      <YAxis tick={chartTick} width={30} />
-                      <Tooltip contentStyle={tooltipStyle} />
-                      <Legend wrapperStyle={{ fontSize: '11px' }} />
-                      <Line connectNulls dataKey="muscle" dot={{ fill: '#10b981', r: 3 }} name="Massa magra (kg)" stroke="#10b981" strokeWidth={2} type="monotone" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
+            {chartData.length > 1 && <BodyMetricsCharts data={chartData} />}
 
             {/* Perimeters */}
             {perimetros.length > 0 && (

@@ -179,6 +179,14 @@ export const NewWorkoutModal = ({
       return
     }
 
+    // Carga fica de fora: muitos exercícios (peso corporal) legitimamente não têm carga.
+    const hasEmptyReps = selected.some((item) => !item.repeticoes.trim())
+
+    if (hasEmptyReps) {
+      setSubmitError('Preencha repetições em todos os exercícios.')
+      return
+    }
+
     const targetStudent =
       studentId === 'self' ? null : students.find((item) => item.id === studentId)
 

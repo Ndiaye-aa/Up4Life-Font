@@ -1,4 +1,4 @@
-import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
+import { AlertCircle, ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { DiaSemana, StudentSchedule } from '../../../@types/schedule'
@@ -86,11 +86,22 @@ export const WeeklyScheduleCard = ({ personalId, students }: Props) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [loadError, setLoadError] = useState('')
   const { endDrag, guardClick, onPointerDown, onPointerMove, scrollRef } = useDragScroll()
 
   useEffect(() => {
     if (!personalId) return
-    getWeeklyScheduleService(personalId).then(setSchedules)
+    let cancelled = false
+
+    getWeeklyScheduleService(personalId)
+      .then((data) => { if (!cancelled) setSchedules(data) })
+      .catch((error: unknown) => {
+        if (cancelled) return
+        console.error('Erro ao carregar agenda semanal:', error)
+        setLoadError('Não foi possível carregar a agenda agora.')
+      })
+
+    return () => { cancelled = true }
   }, [personalId])
 
   const daysByStudent = useMemo(() => {
@@ -194,6 +205,13 @@ export const WeeklyScheduleCard = ({ personalId, students }: Props) => {
           {trainToday === 1 ? '1 aluno treina hoje' : `${trainToday} alunos treinam hoje`}
         </span>
       </button>
+
+      {loadError ? (
+        <p className="flex items-center gap-2 px-4 pt-3 text-xs text-rose-400 light:text-rose-600">
+          <AlertCircle size={13} />
+          {loadError}
+        </p>
+      ) : null}
 
       {students.length === 0 ? (
         <div className="px-4 py-10 text-center">

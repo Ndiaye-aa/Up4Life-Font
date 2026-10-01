@@ -4,13 +4,15 @@ import { useNavigate } from 'react-router-dom'
 import type { WorkoutRecord } from '../@types/workout'
 import { DashboardShell } from '../components/layout/DashboardShell'
 import { PageHeader } from '../components/ui/PageHeader'
+import { ExportWorkoutsModal } from '../components/modules/admin/ExportWorkoutsModal'
 import { NewExerciseModal } from '../components/modules/admin/NewExerciseModal'
 import { NewWorkoutModal } from '../components/modules/admin/NewWorkoutModal'
 import { useAuth } from '../hooks/useAuth'
 import { getDashboardNavItems } from '../utils/dashboardNav'
-import { exportWorkoutPdf } from '../utils/workoutPdf'
-import { getAllWorkoutsService, deleteWorkoutService } from '../services/workouts'
-import { getStudentsService } from '../services/students'
+import { exportWorkoutsPdf } from '../utils/workoutPdf'
+import { deleteWorkoutService } from '../services/workouts'
+import { useWorkouts, invalidateWorkouts } from '../hooks/useWorkouts'
+import { useStudents } from '../hooks/useStudents'
 
 const buildInitials = (fullName: string) =>
   fullName
@@ -74,44 +76,28 @@ export const AdminWorkoutsPage = () => {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
 
-  const [workouts, setWorkouts] = useState<WorkoutRecord[]>([])
-  const [linkedStudents, setLinkedStudents] = useState<{ id: number; nome: string }[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingWorkout, setEditingWorkout] = useState<WorkoutRecord | null>(null)
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false)
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
 
-  useEffect(() => {
-    if (!user?.id) return
+  const { data: workoutsData, isLoading: isLoadingWorkouts, error: workoutsError } = useWorkouts(user?.id)
+  const { data: studentsData, error: studentsError } = useStudents(user?.id)
 
-    async function load() {
-      try {
-        const [wsResult, ssResult] = await Promise.allSettled([
-          getAllWorkoutsService(),
-          getStudentsService(),
-        ])
-
-        if (wsResult.status === 'fulfilled') {
-          setWorkouts(wsResult.value)
-        } else {
-          setLoadError('Não foi possível carregar os treinos. Tente novamente.')
-        }
-
-        if (ssResult.status === 'fulfilled') {
-          setLinkedStudents(ssResult.value.map((student) => ({ id: student.id, nome: student.nome })))
-        } else {
-          setLoadError('Não foi possível carregar os alunos vinculados. Faça login novamente.')
-        }
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    load()
-  }, [user?.id])
+  const workouts = workoutsData ?? []
+  const linkedStudents = useMemo(
+    () => (studentsData ?? []).map((student) => ({ id: student.id, nome: student.nome })),
+    [studentsData],
+  )
+  const isLoading = isLoadingWorkouts && workoutsData == null
+  const loadError = workoutsError
+    ? 'Não foi possível carregar os treinos. Tente novamente.'
+    : studentsError
+      ? 'Não foi possível carregar os alunos vinculados. Faça login novamente.'
+      : null
 
   // GET /treinos já é escopado pelo personal autenticado no backend
   // (treinos.service.ts findAllByPersonal filtra por aluno.personalId via JWT).
@@ -154,14 +140,12 @@ export const AdminWorkoutsPage = () => {
     setEditingWorkout(null)
   }
 
-  const handleCreated = (workout: WorkoutRecord) => {
-    setWorkouts((current) => [workout, ...current])
+  const handleCreated = () => {
+    invalidateWorkouts()
   }
 
-  const handleUpdated = (updated: WorkoutRecord) => {
-    setWorkouts((current) =>
-      current.map((item) => (item.id === updated.id ? updated : item)),
-    )
+  const handleUpdated = () => {
+    invalidateWorkouts()
   }
 
   const handleDelete = async (workoutId: number) => {
@@ -169,7 +153,7 @@ export const AdminWorkoutsPage = () => {
     setDeleteError(null)
     try {
       await deleteWorkoutService(workoutId)
-      setWorkouts((current) => current.filter((item) => item.id !== workoutId))
+      await invalidateWorkouts()
     } catch {
       setDeleteError('Não foi possível deletar o treino. Tente novamente.')
     } finally {
@@ -209,10 +193,21 @@ export const AdminWorkoutsPage = () => {
         />
       ) : null}
 
+      {isExportModalOpen ? (
+        <ExportWorkoutsModal
+          candidates={workouts}
+          onClose={() => setIsExportModalOpen(false)}
+          onConfirm={(selected) => {
+            exportWorkoutsPdf(selected, user?.name)
+            setIsExportModalOpen(false)
+          }}
+        />
+      ) : null}
+
       <div className="space-y-6">
         <PageHeader
           action={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button className="btn-primary" onClick={openCreate} type="button">
                 <Plus size={16} />
                 Criar treino
@@ -224,6 +219,15 @@ export const AdminWorkoutsPage = () => {
               >
                 <Plus size={16} />
                 Criar exercícios
+              </button>
+              <button
+                className="inline-flex items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-sm font-medium text-ink transition hover:bg-elev disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={workouts.length === 0}
+                onClick={() => setIsExportModalOpen(true)}
+                type="button"
+              >
+                <FileText size={16} />
+                Exportar treino
               </button>
             </div>
           }
@@ -306,15 +310,6 @@ export const AdminWorkoutsPage = () => {
                   >
                     <Pencil size={13} />
                     Editar
-                  </button>
-                  <button
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-line px-3 py-2.5 text-xs text-mute transition hover:bg-elev"
-                    onClick={() => exportWorkoutPdf(workout, user?.name)}
-                    title="Exportar planilha em PDF"
-                    type="button"
-                  >
-                    <FileText size={13} />
-                    PDF
                   </button>
                 </div>
               </article>
