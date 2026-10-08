@@ -1,4 +1,5 @@
 import {
+  Activity,
   X,
   Phone,
   Target,
@@ -11,8 +12,19 @@ import { useNavigate } from 'react-router-dom'
 import type { WorkoutRecord } from '../../../@types/workout'
 import { getStudentWorkoutsService } from '../../../services/workouts'
 import { getStudentAssessmentsService, type AssessmentRecord } from '../../../services/assessments'
-import type { StudentCard } from '../../../@types/student'
 import { formatPhone } from '../../../utils/formatPhone'
+
+interface StudentCard {
+  goal: string
+  id: number
+  personalId: number
+  initials: string
+  lastWorkout: string
+  name: string
+  progress: number
+  status: 'ativo' | 'inativo'
+  telefone: string
+}
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string }> = {
   Cardio:      { bg: 'bg-orange-500/12 light:bg-orange-50', text: 'text-orange-400 light:text-orange-600' },
@@ -198,6 +210,26 @@ export const StudentProfileModal = ({ onClose, student }: Props) => {
               )}
             </div>
           </div>
+
+          <button
+            className="group flex w-full items-center gap-4 rounded-2xl border border-line p-4 text-left transition-all hover:bg-elev"
+            onClick={() => {
+              navigate(`/dashboard/admin/alunos/${student.id}`)
+              onClose()
+            }}
+            type="button"
+          >
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-accent-soft">
+              <Activity className="text-accent" size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-medium text-ink">Acompanhamento</h3>
+              <p className="mt-0.5 text-xs text-faint">
+                Frequência, faltas e feedback de {student.name.split(' ')[0]}
+              </p>
+            </div>
+            <ChevronRight className="flex-shrink-0 text-faint transition-colors group-hover:text-accent" size={18} />
+          </button>
 
           {/* Avaliações */}
           <button

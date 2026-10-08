@@ -3,6 +3,7 @@ self.addEventListener('push', (event) => {
     title: 'Up4Life',
     body: 'Você tem uma nova notificação.',
     url: '/',
+    tag: undefined,
   }
 
   if (event.data) {
@@ -18,6 +19,9 @@ self.addEventListener('push', (event) => {
       body: payload.body,
       icon: '/favio.png',
       badge: '/favio.png',
+      // Mesma tag substitui a notificação anterior (ex.: faltas consolidadas do personal).
+      tag: payload.tag,
+      renotify: Boolean(payload.tag),
       data: { url: payload.url },
     }),
   )

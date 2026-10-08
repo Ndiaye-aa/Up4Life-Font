@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { useAuth } from '../../../hooks/useAuth'
 import { updatePersonalSelfService } from '../../../services/personal'
 import { formatPhone } from '../../../utils/formatPhone'
+import { BRAZIL_TIMEZONES } from '../../../utils/timezones'
 
 const personalDataSchema = z.object({
   nome: z
@@ -23,6 +24,7 @@ const personalDataSchema = z.object({
       (value) => value.replace(/\D/g, '').length <= 11,
       'O telefone deve ter no máximo 11 dígitos.',
     ),
+  fusoHorario: z.string().min(1),
 })
 
 type PersonalDataFormValues = z.infer<typeof personalDataSchema>
@@ -32,7 +34,8 @@ interface EditPersonalDataModalProps {
   updateSelf?: (payload: {
     nome: string
     telefone: string
-  }) => Promise<{ nome: string; telefone: string }>
+    fusoHorario: string
+  }) => Promise<{ nome: string; telefone: string; fusoHorario: string }>
 }
 
 export const EditPersonalDataModal = ({
@@ -50,6 +53,7 @@ export const EditPersonalDataModal = ({
     defaultValues: {
       nome: user?.name ?? '',
       telefone: formatPhone(user?.phone ?? ''),
+      fusoHorario: user?.timezone ?? 'America/Sao_Paulo',
     },
     resolver: zodResolver(personalDataSchema),
   })
@@ -63,9 +67,14 @@ export const EditPersonalDataModal = ({
       const updated = await updateSelf({
         nome: values.nome.trim(),
         telefone: values.telefone.replace(/\D/g, ''),
+        fusoHorario: values.fusoHorario,
       })
 
-      updateUser({ name: updated.nome, phone: updated.telefone })
+      updateUser({
+        name: updated.nome,
+        phone: updated.telefone,
+        timezone: updated.fusoHorario,
+      })
       onClose()
     } catch (error) {
       setSubmitError(
@@ -121,6 +130,22 @@ export const EditPersonalDataModal = ({
                 {errors.telefone.message}
               </span>
             ) : null}
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium uppercase tracking-wider text-mute">
+              Fuso horário
+            </span>
+            <select className="field" {...register('fusoHorario')}>
+              {BRAZIL_TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
+            <span className="block text-xs text-faint">
+              Define a data dos treinos e os horários da agenda dos seus alunos.
+            </span>
           </label>
 
           {submitError ? (

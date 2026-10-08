@@ -1,8 +1,19 @@
 import { Search, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { StudentProfileModal } from './StudentProfileModal'
-import type { StudentCard } from '../../../@types/student'
 import { formatPhone } from '../../../utils/formatPhone'
+
+interface StudentCard {
+  goal: string
+  id: number
+  personalId: number
+  initials: string
+  lastWorkout: string
+  name: string
+  progress: number
+  status: 'ativo' | 'inativo'
+  telefone: string
+}
 
 interface Props {
   onClose: () => void

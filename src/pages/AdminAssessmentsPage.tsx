@@ -50,8 +50,8 @@ export const AdminAssessmentsPage = () => {
   const { data: assessmentsData, isLoading: isLoadingAssessments, error: assessmentsError } = useAssessments(user?.id)
   const { data: studentsData, isLoading: isLoadingStudents, error: studentsError } = useStudents(user?.id)
 
-  const assessments = assessmentsData ?? []
-  const students = studentsData ?? []
+  const assessments = useMemo(() => assessmentsData ?? [], [assessmentsData])
+  const students = useMemo(() => studentsData ?? [], [studentsData])
   const isLoading = (isLoadingAssessments && assessmentsData == null) || (isLoadingStudents && studentsData == null) || isLoadingSchedules
   const loadError = assessmentsError || studentsError
     ? 'Não foi possível carregar as avaliações. Tente novamente.'
@@ -187,7 +187,7 @@ export const AdminAssessmentsPage = () => {
     <DashboardShell
       contact={user?.phone ?? ''}
       name={user?.name ?? 'Personal'}
-      navItems={getDashboardNavItems()}
+      navItems={getDashboardNavItems('PERSONAL')}
       onLogout={() => {
         logout()
         navigate('/login')

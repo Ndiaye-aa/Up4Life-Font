@@ -23,7 +23,7 @@ interface DashboardShellProps {
     value: string
   }>
   roleLabel: string
-  tone: 'personal'
+  tone: 'personal' | 'student'
 }
 
 export const DashboardShell = ({

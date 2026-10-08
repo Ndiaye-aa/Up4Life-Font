@@ -23,7 +23,10 @@ export const ProtectedRoute = ({
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate replace to="/login" />
+    const fallbackRoute =
+      user.role === 'PERSONAL' ? '/dashboard/admin' : '/dashboard/aluno'
+
+    return <Navigate replace to={fallbackRoute} />
   }
 
   return <>{children}</>

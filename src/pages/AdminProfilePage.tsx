@@ -40,8 +40,8 @@ export const AdminProfilePage = () => {
   const { data: workoutsData, error: workoutsError } = useWorkouts(user?.id)
   const { data: assessmentsData, error: assessmentsError } = useAssessments(user?.id)
 
-  const workouts = workoutsData ?? []
-  const assessments = assessmentsData ?? []
+  const workouts = useMemo(() => workoutsData ?? [], [workoutsData])
+  const assessments = useMemo(() => assessmentsData ?? [], [assessmentsData])
   const counts = {
     alunos: studentsData?.length ?? 0,
     avaliacoes: assessmentsData?.length ?? 0,
@@ -110,7 +110,7 @@ export const AdminProfilePage = () => {
     <DashboardShell
       contact={user?.phone ?? ''}
       name={user?.name ?? 'Personal'}
-      navItems={getDashboardNavItems()}
+      navItems={getDashboardNavItems('PERSONAL')}
       onLogout={() => {
         logout()
         navigate('/login')

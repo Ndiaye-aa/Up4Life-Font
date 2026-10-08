@@ -68,3 +68,9 @@ export const removeStudentScheduleService = async (
   const result = await api(`/agenda/${alunoId}`, { method: 'DELETE' })
   return normalize(result)
 }
+
+/** Agenda do próprio aluno (somente leitura); null quando o personal ainda não definiu uma. */
+export const getMyScheduleService = async (): Promise<StudentSchedule | null> => {
+  const result = await api('/agenda/me')
+  return normalize(result ? [result] : [])[0] ?? null
+}

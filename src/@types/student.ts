@@ -20,12 +20,8 @@ export interface CreateStudentPayload {
   telefone: string
 }
 
-export interface StudentCard {
-  goal: string
-  id: number
-  initials: string
-  name: string
-  personalId: number
-  status: 'ativo' | 'inativo'
-  telefone: string
+export interface CreatedStudent {
+  student: StudentRecord
+  // Senha inicial gerada pelo servidor; retornada uma única vez no cadastro.
+  senhaInicial?: string
 }

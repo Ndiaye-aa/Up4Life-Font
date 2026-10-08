@@ -1,5 +1,6 @@
 import { api } from './api'
 import type {
+  CreatedStudent,
   CreateStudentPayload,
   StudentRecord,
 } from '../@types/student'
@@ -43,19 +44,26 @@ export const getStudentsService = async (): Promise<StudentRecord[]> => {
 
 export const createStudentService = async (
   payload: CreateStudentPayload,
-): Promise<StudentRecord> => {
+): Promise<CreatedStudent> => {
   const response = await api('/alunos', {
     method: 'POST',
     data: payload,
   })
 
-  return normalizeStudent(response as Record<string, unknown>, {
+  const raw = response as Record<string, unknown>
+  const student = normalizeStudent(raw, {
     historicoSaude: payload.historicoSaude ?? null,
     nascimento: payload.nascimento ?? null,
     nome: payload.nome,
     sexo: payload.sexo ?? null,
     telefone: payload.telefone,
   })
+
+  return {
+    student,
+    senhaInicial:
+      typeof raw.senhaInicial === 'string' ? raw.senhaInicial : undefined,
+  }
 }
 
 export const updateStudentStatusService = async (
@@ -70,20 +78,26 @@ export const updateStudentStatusService = async (
   return normalizeStudent(response as Record<string, unknown>)
 }
 
-export type UpdateStudentPayload = Partial<CreateStudentPayload>
+export interface UpdateSelfPayload {
+  nome?: string
+  telefone?: string
+  senha?: string
+  nascimento?: string
+  historicoSaude?: string
+}
 
-export const updateStudentService = async (
-  id: number,
-  payload: UpdateStudentPayload,
+export const getStudentSelfService = async (): Promise<StudentRecord> => {
+  const response = await api('/alunos/me')
+  return normalizeStudent(response as Record<string, unknown>)
+}
+
+export const updateStudentSelfService = async (
+  payload: UpdateSelfPayload,
 ): Promise<StudentRecord> => {
-  const response = await api(`/alunos/${id}`, {
+  const response = await api('/alunos/me', {
     method: 'PATCH',
     data: payload,
   })
 
   return normalizeStudent(response as Record<string, unknown>)
-}
-
-export const deleteStudentService = async (id: number): Promise<void> => {
-  await api(`/alunos/${id}`, { method: 'DELETE' })
 }

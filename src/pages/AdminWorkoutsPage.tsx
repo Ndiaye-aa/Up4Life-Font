@@ -87,7 +87,7 @@ export const AdminWorkoutsPage = () => {
   const { data: workoutsData, isLoading: isLoadingWorkouts, error: workoutsError } = useWorkouts(user?.id)
   const { data: studentsData, error: studentsError } = useStudents(user?.id)
 
-  const workouts = workoutsData ?? []
+  const workouts = useMemo(() => workoutsData ?? [], [workoutsData])
   const linkedStudents = useMemo(
     () => (studentsData ?? []).map((student) => ({ id: student.id, nome: student.nome })),
     [studentsData],
@@ -165,7 +165,7 @@ export const AdminWorkoutsPage = () => {
     <DashboardShell
       contact={user.phone ?? ''}
       name={user.name ?? 'Personal'}
-      navItems={getDashboardNavItems()}
+      navItems={getDashboardNavItems('PERSONAL')}
       onLogout={() => {
         logout()
         navigate('/login')

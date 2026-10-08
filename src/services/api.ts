@@ -10,9 +10,24 @@ const API_BASE_URL = import.meta.env.PROD
   ? '/api'
   : import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const REQUEST_TIMEOUT_MS = 30_000
+// Leituras toleram o cold start do Render (a 1ª chamada pode levar >30 s).
+const GET_TIMEOUT_MS = 45_000
+const GET_RETRY_DELAY_MS = 1_500
+const RETRYABLE_STATUS = new Set([502, 503, 504])
 
 export const SESSION_EXPIRED_EVENT = 'up4life:session-expired'
 export const SESSION_EXPIRED_STORAGE_KEY = 'up4life.session_expired'
+
+/** Erro HTTP da API; `status` permite tratar 403/409/422 de forma específica. */
+export class ApiError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
 
 interface RequestOptions extends RequestInit {
   data?: unknown
@@ -46,14 +61,36 @@ const tryRefresh = (): Promise<boolean> => {
   return refreshPromise
 }
 
-const doFetch = (endpoint: string, config: RequestInit) => {
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const fetchOnce = (endpoint: string, config: RequestInit, timeoutMs: number) => {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   return fetch(`${API_BASE_URL}${endpoint}`, {
     ...config,
     signal: controller.signal,
   }).finally(() => clearTimeout(timeoutId))
+}
+
+/**
+ * Leituras (GET) têm timeout maior e uma nova tentativa para timeout, falha de
+ * rede e 502/503/504 (cold start / reinício do backend). Escritas nunca são
+ * repetidas automaticamente: não são idempotentes.
+ */
+const doFetch = async (endpoint: string, config: RequestInit) => {
+  if (config.method !== 'GET') {
+    return fetchOnce(endpoint, config, REQUEST_TIMEOUT_MS)
+  }
+
+  try {
+    const response = await fetchOnce(endpoint, config, GET_TIMEOUT_MS)
+    if (!RETRYABLE_STATUS.has(response.status)) return response
+  } catch {
+    /* tenta de novo abaixo */
+  }
+  await sleep(GET_RETRY_DELAY_MS)
+  return fetchOnce(endpoint, config, GET_TIMEOUT_MS)
 }
 
 export const api = async (
@@ -116,10 +153,16 @@ export const api = async (
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || 'Ocorreu um erro na requisição.')
+      const message = Array.isArray(errorData.message)
+        ? errorData.message.join(' ')
+        : errorData.message
+      throw new ApiError(message || 'Ocorreu um erro na requisição.', response.status)
     }
 
-    return response.json()
+    // 204 / corpo vazio (ex.: handler que retorna null) não é erro.
+    if (response.status === 204) return null
+    const text = await response.text()
+    return text ? JSON.parse(text) : null
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('A requisição demorou muito. Verifique sua conexão.')

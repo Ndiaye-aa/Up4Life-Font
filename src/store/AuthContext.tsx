@@ -8,6 +8,7 @@ import {
 import type { AuthUser, LoginPayload } from '../@types/auth'
 import { loginService } from '../services/auth'
 import { api, SESSION_EXPIRED_EVENT } from '../services/api'
+import { DEFAULT_TIMEZONE } from '../utils/timezones'
 
 interface AuthContextValue {
   isAuthenticated: boolean
@@ -30,6 +31,7 @@ interface MeResponse {
     nome: string
     telefone: string
     role: AuthUser['role']
+    fusoHorario?: string
   }
 }
 
@@ -38,6 +40,7 @@ const mapMeResponse = (data: MeResponse): AuthUser => ({
   name: data.user.nome,
   phone: data.user.telefone,
   role: data.user.role,
+  timezone: data.user.fusoHorario ?? DEFAULT_TIMEZONE,
 })
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {

@@ -1,38 +1,31 @@
 import {
+  Activity,
   ClipboardList,
   Dumbbell,
   LayoutDashboard,
   UserCircle,
   Users,
 } from 'lucide-react'
+import type { UserRole } from '../@types/auth'
 import type { DashboardNavItem } from '../components/layout/DashboardShell'
 
-const BASE_PATH = '/dashboard/admin'
+export const getDashboardNavItems = (role: UserRole): DashboardNavItem[] => {
+  if (role === 'PERSONAL') {
+    const base = '/dashboard/admin'
+    return [
+      { icon: LayoutDashboard, label: 'Home', to: base },
+      { icon: Users, label: 'Alunos', to: `${base}/alunos` },
+      { icon: Dumbbell, label: 'Treinos', to: `${base}/treinos` },
+      { icon: ClipboardList, label: 'Avaliações', to: `${base}/avaliacoes` },
+      { icon: UserCircle, label: 'Perfil', to: `${base}/perfil` },
+    ]
+  }
 
-export const getDashboardNavItems = (): DashboardNavItem[] => [
-  {
-    icon: LayoutDashboard,
-    label: 'Home',
-    to: BASE_PATH,
-  },
-  {
-    icon: Users,
-    label: 'Alunos',
-    to: `${BASE_PATH}/alunos`,
-  },
-  {
-    icon: Dumbbell,
-    label: 'Treinos',
-    to: `${BASE_PATH}/treinos`,
-  },
-  {
-    icon: ClipboardList,
-    label: 'Avaliações',
-    to: `${BASE_PATH}/avaliacoes`,
-  },
-  {
-    icon: UserCircle,
-    label: 'Perfil',
-    to: `${BASE_PATH}/perfil`,
-  },
-]
+  const base = '/dashboard/aluno'
+  return [
+    { icon: LayoutDashboard, label: 'Home', to: base },
+    { icon: Dumbbell, label: 'Treinos', to: `${base}/treinos` },
+    { icon: Activity, label: 'Progresso', to: `${base}/progresso` },
+    { icon: ClipboardList, label: 'Avaliações', to: `${base}/avaliacoes` },
+  ]
+}

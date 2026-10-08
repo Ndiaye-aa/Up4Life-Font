@@ -1,6 +1,6 @@
 import { X } from 'lucide-react'
 import { useState } from 'react'
-import type { DiaSemana } from '../../../@types/schedule'
+import type { DiaSemana, HorarioDia, Modalidade } from '../../../@types/schedule'
 
 const DAYS: { value: DiaSemana; abbr: string; letter: string; full: string }[] = [
   { value: 1, abbr: 'Seg', letter: 'S', full: 'Segunda' },
@@ -12,13 +12,19 @@ const DAYS: { value: DiaSemana; abbr: string; letter: string; full: string }[] =
   { value: 0, abbr: 'Dom', letter: 'D', full: 'Domingo' },
 ]
 
+const omitDay = <T,>(map: Partial<Record<DiaSemana, T>>, dia: DiaSemana) => {
+  const copy = { ...map }
+  delete copy[dia]
+  return copy
+}
+
 interface Props {
   errorMessage?: string
   initialDias: DiaSemana[]
-  initialHorarios?: Partial<Record<DiaSemana, string>>
+  initialHorarios?: Partial<Record<DiaSemana, HorarioDia>>
   isSaving?: boolean
   onClose: () => void
-  onSave: (dias: DiaSemana[], horarios: Partial<Record<DiaSemana, string>>) => void
+  onSave: (dias: DiaSemana[], horarios: Partial<Record<DiaSemana, HorarioDia>>) => void
   studentInitials: string
   studentName: string
 }
@@ -34,8 +40,16 @@ export const EditScheduleModal = ({
   studentName,
 }: Props) => {
   const [dias, setDias] = useState<DiaSemana[]>(initialDias)
-  const [horarios, setHorarios] = useState<Partial<Record<DiaSemana, string>>>(
-    initialHorarios ?? {},
+  const [horas, setHoras] = useState<Partial<Record<DiaSemana, string>>>(() =>
+    Object.fromEntries(
+      Object.entries(initialHorarios ?? {}).map(([dia, h]) => [dia, h?.hora ?? '']),
+    ),
+  )
+  const [modalidades, setModalidades] = useState<Partial<Record<DiaSemana, Modalidade>>>(
+    () =>
+      Object.fromEntries(
+        Object.entries(initialHorarios ?? {}).map(([dia, h]) => [dia, h?.modalidade]),
+      ),
   )
 
   const toggleDay = (value: DiaSemana) => {
@@ -44,17 +58,20 @@ export const EditScheduleModal = ({
         ? current.filter((day) => day !== value)
         : [...current, value],
     )
-    setHorarios((current) => {
-      if (dias.includes(value)) {
-        const { [value]: _removed, ...rest } = current
-        return rest
-      }
-      return current
-    })
+    if (dias.includes(value)) {
+      setHoras((current) => omitDay(current, value))
+      setModalidades((current) => omitDay(current, value))
+    }
   }
 
-  const setHorario = (value: DiaSemana, horario: string) => {
-    setHorarios((current) => ({ ...current, [value]: horario }))
+  const handleSave = () => {
+    // A modalidade só é gravada junto com o horário do dia.
+    const horarios: Partial<Record<DiaSemana, HorarioDia>> = {}
+    for (const dia of dias) {
+      const hora = horas[dia]
+      if (hora) horarios[dia] = { hora, modalidade: modalidades[dia] ?? 'PRESENCIAL' }
+    }
+    onSave(dias, horarios)
   }
 
   const daysLabel = DAYS.filter((day) => dias.includes(day.value))
@@ -132,7 +149,7 @@ export const EditScheduleModal = ({
           {dias.length > 0 ? (
             <div className="mt-4 space-y-2">
               <p className="text-xs uppercase tracking-[0.14em] text-faint">
-                Horário por dia (opcional)
+                Horário e modalidade por dia (opcional)
               </p>
               {DAYS.filter((day) => dias.includes(day.value)).map((day) => (
                 <div className="flex items-center gap-3" key={day.value}>
@@ -141,10 +158,26 @@ export const EditScheduleModal = ({
                   </span>
                   <input
                     className="field"
-                    onChange={(event) => setHorario(day.value, event.target.value)}
+                    onChange={(event) =>
+                      setHoras((current) => ({ ...current, [day.value]: event.target.value }))
+                    }
                     type="time"
-                    value={horarios[day.value] ?? ''}
+                    value={horas[day.value] ?? ''}
                   />
+                  <select
+                    aria-label={`Modalidade de ${day.full}`}
+                    className="field w-auto shrink-0"
+                    onChange={(event) =>
+                      setModalidades((current) => ({
+                        ...current,
+                        [day.value]: event.target.value as Modalidade,
+                      }))
+                    }
+                    value={modalidades[day.value] ?? 'PRESENCIAL'}
+                  >
+                    <option value="PRESENCIAL">Presencial</option>
+                    <option value="ONLINE">Online</option>
+                  </select>
                 </div>
               ))}
             </div>
@@ -168,7 +201,7 @@ export const EditScheduleModal = ({
             <button
               className="btn-primary flex-1"
               disabled={dias.length === 0 || isSaving}
-              onClick={() => onSave(dias, horarios)}
+              onClick={handleSave}
               type="button"
             >
               {isSaving ? 'Salvando...' : 'Salvar'}

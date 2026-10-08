@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import type { StudentCard } from '../@types/student'
-import { StudentFormModal } from '../components/modules/admin/StudentFormModal'
+import type { StudentRecord } from '../@types/student'
+import { NewStudentModal } from '../components/modules/admin/NewStudentModal'
 import { StudentsListModal } from '../components/modules/admin/StudentsListModal'
 import { WeeklyScheduleCard } from '../components/modules/admin/WeeklyScheduleCard'
 import { DashboardShell } from '../components/layout/DashboardShell'
@@ -10,12 +10,40 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { PushOptInBanner } from '../components/ui/PushOptInBanner'
 import { StatStrip } from '../components/ui/StatStrip'
 import { useAuth } from '../hooks/useAuth'
-import { mapStudentRecordToCard } from '../utils/students'
 import { getDashboardNavItems } from '../utils/dashboardNav'
 import { updateStudentStatusService } from '../services/students'
 import { useStudents, invalidateStudents } from '../hooks/useStudents'
 import { useWorkouts } from '../hooks/useWorkouts'
 import { useAssessments } from '../hooks/useAssessments'
+
+interface StudentCard {
+  goal: string
+  id: number
+  personalId: number
+  initials: string
+  lastWorkout: string
+  name: string
+  progress: number
+  status: 'ativo' | 'inativo'
+  telefone: string
+}
+
+const mapStudentRecordToCard = (student: StudentRecord): StudentCard => ({
+  goal: student.historicoSaude?.trim() ? 'Saude acompanhada' : 'Novo cadastro',
+  id: student.id,
+  personalId: student.personalId,
+  initials: student.nome
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((name) => name[0]?.toUpperCase() ?? '')
+    .join(''),
+  lastWorkout: 'Recem cadastrado',
+  name: student.nome,
+  progress: 0,
+  status: student.ativo ? 'ativo' : 'inativo',
+  telefone: student.telefone,
+})
 
 export const AdminDashboardPage = () => {
   const navigate = useNavigate()
@@ -67,7 +95,7 @@ export const AdminDashboardPage = () => {
     <DashboardShell
       contact={user?.phone ?? ''}
       name={user?.name ?? 'Personal'}
-      navItems={getDashboardNavItems()}
+      navItems={getDashboardNavItems('PERSONAL')}
       onLogout={() => {
         logout()
         navigate('/login')
@@ -89,9 +117,9 @@ export const AdminDashboardPage = () => {
       ) : null}
 
       {isModalOpen ? (
-        <StudentFormModal
+        <NewStudentModal
           onClose={() => setIsModalOpen(false)}
-          onSaved={() => {
+          onCreated={() => {
             invalidateStudents()
           }}
         />
@@ -104,7 +132,7 @@ export const AdminDashboardPage = () => {
           title={`Ola, ${user?.name ?? 'Personal'}`}
         />
 
-        <PushOptInBanner />
+        <PushOptInBanner variant="personal" />
 
         <div className="flex items-center gap-3">
           <StatStrip items={metrics} />

@@ -1,15 +1,20 @@
 import { api } from './api'
 import type { AuthUser, LoginPayload } from '../@types/auth'
+import { DEFAULT_TIMEZONE } from '../utils/timezones'
 
 export const loginService = async ({
   phone,
   password,
+  role,
 }: LoginPayload): Promise<AuthUser> => {
   if (!phone.trim() || !password.trim()) {
     throw new Error('Preencha telefone e senha para continuar.')
   }
 
-  const response = await api('/auth/personal/login', {
+  const endpoint =
+    role === 'PERSONAL' ? '/auth/personal/login' : '/auth/aluno/login'
+
+  const response = await api(endpoint, {
     method: 'POST',
     skipAuthRedirect: true,
     data: {
@@ -23,5 +28,6 @@ export const loginService = async ({
     name: response.user.nome,
     phone: response.user.telefone,
     role: response.user.role,
+    timezone: response.user.fusoHorario ?? DEFAULT_TIMEZONE,
   }
 }

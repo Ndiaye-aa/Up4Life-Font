@@ -163,8 +163,8 @@ export const AdminNewAssessmentPage = () => {
 
   const { data: studentsData, isLoading: isLoadingStudents } = useStudents(user?.id)
   const { data: assessmentsData } = useAssessments(user?.id)
-  const students: StudentRecord[] = studentsData ?? []
-  const assessments = assessmentsData ?? []
+  const students: StudentRecord[] = useMemo(() => studentsData ?? [], [studentsData])
+  const assessments = useMemo(() => assessmentsData ?? [], [assessmentsData])
 
   // Preenche aluno/sexo padrão uma única vez, quando a lista de alunos chega pela primeira vez.
   const hasSetDefaultAluno = useRef(false)
@@ -393,7 +393,7 @@ export const AdminNewAssessmentPage = () => {
     <DashboardShell
       contact={user?.phone ?? ''}
       name={user?.name ?? 'Personal'}
-      navItems={getDashboardNavItems()}
+      navItems={getDashboardNavItems('PERSONAL')}
       onLogout={() => {
         logout()
         navigate('/login')

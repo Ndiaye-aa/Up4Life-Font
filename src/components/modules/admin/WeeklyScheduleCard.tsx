@@ -1,14 +1,25 @@
 import { AlertCircle, ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import type { DiaSemana, StudentSchedule } from '../../../@types/schedule'
-import type { StudentCard } from '../../../@types/student'
+import type { DiaSemana, HorarioDia, StudentSchedule } from '../../../@types/schedule'
 import {
   getWeeklyScheduleService,
   removeStudentScheduleService,
   saveStudentScheduleService,
 } from '../../../services/schedule'
 import { EditScheduleModal } from './EditScheduleModal'
+
+interface StudentCard {
+  goal: string
+  id: number
+  personalId: number
+  initials: string
+  lastWorkout: string
+  name: string
+  progress: number
+  status: 'ativo' | 'inativo'
+  telefone: string
+}
 
 const DAYS: { value: DiaSemana; abbr: string }[] = [
   { value: 1, abbr: 'Seg' },
@@ -100,7 +111,7 @@ export const WeeklyScheduleCard = ({ personalId, students }: Props) => {
   }, [schedules])
 
   const horariosByStudent = useMemo(() => {
-    const map = new Map<number, Partial<Record<DiaSemana, string>>>()
+    const map = new Map<number, Partial<Record<DiaSemana, HorarioDia>>>()
     schedules.forEach((schedule) => map.set(schedule.alunoId, schedule.horarios ?? {}))
     return map
   }, [schedules])
@@ -128,7 +139,7 @@ export const WeeklyScheduleCard = ({ personalId, students }: Props) => {
       const dias = daysByStudent.get(student.id) ?? []
       const horarios = horariosByStudent.get(student.id) ?? {}
       dias.forEach((dia) => {
-        const horario = horarios[dia]
+        const horario = horarios[dia]?.hora
         if (horario) times.add(horario)
         else hasNoTime = true
       })
@@ -144,7 +155,7 @@ export const WeeklyScheduleCard = ({ personalId, students }: Props) => {
     return rows
   }, [scheduledStudents, daysByStudent, horariosByStudent])
 
-  const handleSave = async (dias: DiaSemana[], horarios: Partial<Record<DiaSemana, string>>) => {
+  const handleSave = async (dias: DiaSemana[], horarios: Partial<Record<DiaSemana, HorarioDia>>) => {
     if (!editingStudent) return
     setIsSaving(true)
     setSaveError('')
@@ -249,7 +260,7 @@ export const WeeklyScheduleCard = ({ personalId, students }: Props) => {
                       const who = scheduledStudents.filter((student) => {
                         const dias = daysByStudent.get(student.id) ?? []
                         if (!dias.includes(day.value)) return false
-                        const horario = horariosByStudent.get(student.id)?.[day.value]
+                        const horario = horariosByStudent.get(student.id)?.[day.value]?.hora
                         return row.key === 'sem-horario' ? !horario : horario === row.key
                       })
                       return (

@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import type { CreateStudentPayload, StudentRecord } from '../../../@types/student'
-import { createStudentService, updateStudentService } from '../../../services/students'
+import { createStudentService } from '../../../services/students'
 import { formatPhone } from '../../../utils/formatPhone'
 
-const studentSchema = z.object({
+const newStudentSchema = z.object({
   historicoSaude: z.string().max(600, 'Use no máximo 600 caracteres.').optional(),
   nascimento: z.string().optional(),
   nome: z
@@ -27,7 +27,7 @@ const studentSchema = z.object({
     ),
 })
 
-type StudentFormValues = z.infer<typeof studentSchema>
+type NewStudentFormValues = z.infer<typeof newStudentSchema>
 
 const maskDate = (value: string): string => {
   const digits = value.replace(/\D/g, '').slice(0, 8)
@@ -36,43 +36,39 @@ const maskDate = (value: string): string => {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
 }
 
-const isoToBrDate = (value: string | null): string =>
-  value ? value.slice(0, 10).split('-').reverse().join('/') : ''
-
-interface StudentFormModalProps {
+interface NewStudentModalProps {
   onClose: () => void
-  onSaved: (student: StudentRecord) => void
-  // Quando informado, o modal edita o aluno em vez de cadastrar um novo.
-  student?: StudentRecord
+  onCreated: (student: StudentRecord) => void
 }
 
-export const StudentFormModal = ({
+export const NewStudentModal = ({
   onClose,
-  onSaved,
-  student,
-}: StudentFormModalProps) => {
-  const isEditing = Boolean(student)
+  onCreated,
+}: NewStudentModalProps) => {
   const [submitError, setSubmitError] = useState('')
-  const [savedName, setSavedName] = useState<string | null>(null)
+  const [createdInfo, setCreatedInfo] = useState<{
+    nome: string
+    senhaInicial?: string
+  } | null>(null)
   const {
     formState: { errors, isSubmitting },
     handleSubmit,
     register,
-  } = useForm<StudentFormValues>({
+  } = useForm<NewStudentFormValues>({
     defaultValues: {
-      historicoSaude: student?.historicoSaude ?? '',
-      nascimento: isoToBrDate(student?.nascimento ?? null),
-      nome: student?.nome ?? '',
-      sexo: student?.sexo ?? null,
-      telefone: formatPhone(student?.telefone ?? ''),
+      historicoSaude: '',
+      nascimento: '',
+      nome: '',
+      sexo: null,
+      telefone: '',
     },
-    resolver: zodResolver(studentSchema),
+    resolver: zodResolver(newStudentSchema),
   })
 
   const telefoneRegistration = register('telefone')
   const nascimentoRegistration = register('nascimento')
 
-  const onSubmit = async (values: StudentFormValues) => {
+  const onSubmit = async (values: NewStudentFormValues) => {
     setSubmitError('')
 
     try {
@@ -88,16 +84,14 @@ export const StudentFormModal = ({
         telefone: values.telefone.replace(/\D/g, ''),
       }
 
-      const saved = student
-        ? await updateStudentService(student.id, payload)
-        : await createStudentService(payload)
-      onSaved(saved)
-      setSavedName(saved.nome)
+      const { student, senhaInicial } = await createStudentService(payload)
+      onCreated(student)
+      setCreatedInfo({ nome: student.nome, senhaInicial })
     } catch (error) {
       setSubmitError(
         error instanceof Error
           ? error.message
-          : 'Não foi possível salvar o aluno agora.',
+          : 'Não foi possível cadastrar o aluno agora.',
       )
     }
   }
@@ -109,11 +103,14 @@ export const StudentFormModal = ({
         <div className="flex items-start justify-between gap-4 border-b border-line p-5">
           <div>
             <p className="text-sm uppercase tracking-[0.24em] text-accent">
-              {isEditing ? 'Edição' : 'Cadastro'}
+              Cadastro
             </p>
             <h2 className="font-display mt-2 text-2xl font-semibold text-ink">
-              {isEditing ? 'Editar aluno' : 'Novo aluno'}
+              Novo aluno
             </h2>
+            <p className="mt-1 text-sm leading-6 text-mute">
+              Formulário aderente a tabela `aluno`, incluindo vinculo ao personal logado.
+            </p>
           </div>
           <button
             className="rounded-xl p-2 text-faint transition hover:bg-elev hover:text-ink"
@@ -124,12 +121,23 @@ export const StudentFormModal = ({
           </button>
         </div>
 
-        {savedName ? (
+        {createdInfo ? (
           <div className="flex-1 overflow-y-auto p-5">
             <p className="text-sm leading-6 text-mute">
-              <span className="font-semibold text-ink">{savedName}</span>{' '}
-              {isEditing ? 'foi atualizado' : 'foi cadastrado'} com sucesso.
+              <span className="font-semibold text-ink">{createdInfo.nome}</span>{' '}
+              foi cadastrado com sucesso.
             </p>
+            {createdInfo.senhaInicial ? (
+              <div className="mt-4 rounded-2xl bg-elev px-4 py-4">
+                <p className="text-sm text-mute">
+                  Senha inicial do aluno (anote e repasse — ela não será
+                  exibida novamente):
+                </p>
+                <p className="mt-2 font-mono text-2xl font-semibold tracking-widest text-ink">
+                  {createdInfo.senhaInicial}
+                </p>
+              </div>
+            ) : null}
             <div className="mt-5 flex justify-end border-t border-line pt-5">
               <button className="btn-primary" onClick={onClose} type="button">
                 Concluir
@@ -222,6 +230,11 @@ export const StudentFormModal = ({
             </label>
           </div>
 
+          <p className="mt-4 rounded-2xl bg-elev px-4 py-3 text-sm text-mute">
+            A senha inicial do aluno será gerada automaticamente e exibida após
+            o cadastro. Ele poderá alterá-la depois no próprio perfil.
+          </p>
+
           {submitError ? (
             <div className="mt-4 text-sm text-rose-400 light:text-rose-600">
               {submitError}
@@ -241,11 +254,7 @@ export const StudentFormModal = ({
               disabled={isSubmitting}
               type="submit"
             >
-              {isSubmitting
-                ? 'Salvando...'
-                : isEditing
-                  ? 'Salvar alterações'
-                  : 'Cadastrar aluno'}
+              {isSubmitting ? 'Cadastrando...' : 'Cadastrar aluno'}
             </button>
           </div>
         </form>
