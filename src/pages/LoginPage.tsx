@@ -1,11 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
-import type { UserRole } from '../@types/auth'
 import { AuthSplitLayout } from '../components/layout/AuthSplitLayout'
-import { RoleSegmentedControl } from '../components/ui/RoleSegmentedControl'
 import { TextField } from '../components/ui/TextField'
 import { useAuth } from '../hooks/useAuth'
 import { SESSION_EXPIRED_STORAGE_KEY } from '../services/api'
@@ -20,7 +18,6 @@ const loginSchema = z.object({
       'Informe um telefone valido.',
     ),
   password: z.string().min(6, 'A senha deve ter ao menos 6 caracteres.'),
-  role: z.enum(['PERSONAL', 'ALUNO']),
 })
 
 type LoginFormValues = z.infer<typeof loginSchema>
@@ -40,40 +37,19 @@ export const LoginPage = () => {
   }, [])
 
   const {
-    control,
     formState: { errors },
     handleSubmit,
     register,
-    setValue,
   } = useForm<LoginFormValues>({
     defaultValues: {
       phone: '',
       password: '',
-      role: 'PERSONAL',
     },
     resolver: zodResolver(loginSchema),
   })
 
-  const role = useWatch({
-    control,
-    name: 'role',
-  })
-
   if (isAuthenticated && user) {
-    return (
-      <Navigate
-        replace
-        to={user.role === 'PERSONAL' ? '/dashboard/admin' : '/dashboard/aluno'}
-      />
-    )
-  }
-
-  const handleRoleChange = (selectedRole: UserRole) => {
-    setValue('role', selectedRole, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    })
+    return <Navigate replace to="/dashboard/admin" />
   }
 
   const phoneRegistration = register('phone')
@@ -82,12 +58,8 @@ export const LoginPage = () => {
     setSubmitError('')
 
     try {
-      const authenticatedUser = await login(values)
-      navigate(
-        authenticatedUser.role === 'PERSONAL'
-          ? '/dashboard/admin'
-          : '/dashboard/aluno',
-      )
+      await login(values)
+      navigate('/dashboard/admin')
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -110,7 +82,7 @@ export const LoginPage = () => {
             Bem-vindo de volta
           </h2>
           <p className="text-sm leading-6 text-mute">
-            Entre com seu perfil para acompanhar seus treinos e avaliações.
+            Entre para gerenciar seus alunos, treinos e avaliações.
           </p>
         </div>
 
@@ -119,8 +91,6 @@ export const LoginPage = () => {
             {sessionExpiredMessage}
           </p>
         ) : null}
-
-        <RoleSegmentedControl onChange={handleRoleChange} value={role} />
 
         <form
           action="#"

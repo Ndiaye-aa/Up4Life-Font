@@ -56,11 +56,11 @@ const doFetch = (endpoint: string, config: RequestInit) => {
   }).finally(() => clearTimeout(timeoutId))
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const api = async (
   endpoint: string,
   options: RequestOptions = {},
   isRetry = false,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> => {
   const { data, skipAuthRedirect = false, ...customConfig } = options
 

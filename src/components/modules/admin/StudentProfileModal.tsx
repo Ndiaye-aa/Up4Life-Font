@@ -11,19 +11,8 @@ import { useNavigate } from 'react-router-dom'
 import type { WorkoutRecord } from '../../../@types/workout'
 import { getStudentWorkoutsService } from '../../../services/workouts'
 import { getStudentAssessmentsService, type AssessmentRecord } from '../../../services/assessments'
+import type { StudentCard } from '../../../@types/student'
 import { formatPhone } from '../../../utils/formatPhone'
-
-interface StudentCard {
-  goal: string
-  id: number
-  personalId: number
-  initials: string
-  lastWorkout: string
-  name: string
-  progress: number
-  status: 'ativo' | 'inativo'
-  telefone: string
-}
 
 const CATEGORY_STYLES: Record<string, { bg: string; text: string }> = {
   Cardio:      { bg: 'bg-orange-500/12 light:bg-orange-50', text: 'text-orange-400 light:text-orange-600' },

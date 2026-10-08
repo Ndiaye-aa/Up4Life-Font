@@ -16,7 +16,7 @@ export const DashboardNav = ({
   if (mobile) {
     return (
       <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-line bg-canvas lg:hidden">
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-5">
           {items.map((item) => (
             <NavLink
               key={item.to}

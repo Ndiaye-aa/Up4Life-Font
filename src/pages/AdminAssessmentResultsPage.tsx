@@ -177,7 +177,7 @@ export const AdminAssessmentResultsPage = () => {
     <DashboardShell
       contact={user?.phone ?? ''}
       name={user?.name ?? 'Personal'}
-      navItems={getDashboardNavItems('PERSONAL')}
+      navItems={getDashboardNavItems()}
       onLogout={() => {
         logout()
         navigate('/login')

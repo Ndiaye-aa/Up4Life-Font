@@ -1,4 +1,4 @@
-export type UserRole = 'PERSONAL' | 'ALUNO'
+export type UserRole = 'PERSONAL'
 
 export interface AuthUser {
   id: number
@@ -10,5 +10,4 @@ export interface AuthUser {
 export interface LoginPayload {
   phone: string
   password: string
-  role: UserRole
 }

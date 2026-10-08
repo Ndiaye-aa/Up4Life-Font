@@ -2,15 +2,8 @@ import { useState } from 'react'
 import { Bell, X } from 'lucide-react'
 import { usePushNotifications } from '../../hooks/usePushNotifications'
 
-interface PushOptInBannerProps {
-  variant?: 'aluno' | 'personal'
-}
-
-export const PushOptInBanner = ({ variant = 'aluno' }: PushOptInBannerProps) => {
-  const dismissedKey =
-    variant === 'personal'
-      ? 'up4life.push.banner_dismissed.personal'
-      : 'up4life.push.banner_dismissed'
+export const PushOptInBanner = () => {
+  const dismissedKey = 'up4life.push.banner_dismissed.personal'
   const { supported, permission, subscribed, accountSubscribed, busy, ready, error, subscribe } =
     usePushNotifications()
   const [dismissed, setDismissed] = useState(
@@ -41,9 +34,7 @@ export const PushOptInBanner = ({ variant = 'aluno' }: PushOptInBannerProps) => 
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-ink">Lembretes de avaliação</p>
         <p className="mt-0.5 text-xs text-faint">
-          {variant === 'personal'
-            ? 'Receba um aviso no seu celular na véspera e no dia das avaliações agendadas dos seus alunos.'
-            : 'Receba um aviso no seu celular na véspera e no dia da sua avaliação física.'}
+          Receba um aviso no seu celular na véspera e no dia das avaliações agendadas dos seus alunos.
         </p>
         {error ? (
           <p className="mt-1 text-xs text-rose-400 light:text-rose-600">{error}</p>

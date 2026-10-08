@@ -4,16 +4,12 @@ import type { AuthUser, LoginPayload } from '../@types/auth'
 export const loginService = async ({
   phone,
   password,
-  role,
 }: LoginPayload): Promise<AuthUser> => {
   if (!phone.trim() || !password.trim()) {
     throw new Error('Preencha telefone e senha para continuar.')
   }
 
-  const endpoint =
-    role === 'PERSONAL' ? '/auth/personal/login' : '/auth/aluno/login'
-
-  const response = await api(endpoint, {
+  const response = await api('/auth/personal/login', {
     method: 'POST',
     skipAuthRedirect: true,
     data: {

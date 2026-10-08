@@ -3,34 +3,36 @@ import {
   Dumbbell,
   LayoutDashboard,
   UserCircle,
+  Users,
 } from 'lucide-react'
-import type { UserRole } from '../@types/auth'
 import type { DashboardNavItem } from '../components/layout/DashboardShell'
 
-export const getDashboardNavItems = (role: UserRole): DashboardNavItem[] => {
-  const basePath =
-    role === 'PERSONAL' ? '/dashboard/admin' : '/dashboard/aluno'
+const BASE_PATH = '/dashboard/admin'
 
-  return [
-    {
-      icon: LayoutDashboard,
-      label: 'Home',
-      to: basePath,
-    },
-    {
-      icon: Dumbbell,
-      label: 'Treinos',
-      to: `${basePath}/treinos`,
-    },
-    {
-      icon: ClipboardList,
-      label: 'Avaliações',
-      to: `${basePath}/avaliacoes`,
-    },
-    {
-      icon: UserCircle,
-      label: 'Perfil',
-      to: `${basePath}/perfil`,
-    },
-  ]
-}
+export const getDashboardNavItems = (): DashboardNavItem[] => [
+  {
+    icon: LayoutDashboard,
+    label: 'Home',
+    to: BASE_PATH,
+  },
+  {
+    icon: Users,
+    label: 'Alunos',
+    to: `${BASE_PATH}/alunos`,
+  },
+  {
+    icon: Dumbbell,
+    label: 'Treinos',
+    to: `${BASE_PATH}/treinos`,
+  },
+  {
+    icon: ClipboardList,
+    label: 'Avaliações',
+    to: `${BASE_PATH}/avaliacoes`,
+  },
+  {
+    icon: UserCircle,
+    label: 'Perfil',
+    to: `${BASE_PATH}/perfil`,
+  },
+]
